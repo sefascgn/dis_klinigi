@@ -40,7 +40,8 @@ class Doctor extends Model
 
     public function appointments(): HasMany
     {
-        return $this->hasMany(Appointment::class);
+        // chaperone: yüklenen randevulara bu doktor ek sorgu olmadan bağlanır.
+        return $this->hasMany(Appointment::class)->chaperone();
     }
 
     public function treatments(): HasMany

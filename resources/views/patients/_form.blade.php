@@ -16,7 +16,23 @@
     </div>
 
     <div>
-        <h3 class="mb-3 text-sm font-semibold text-gray-900">Sağlık bilgileri</h3>
+        <h3 class="mb-3 text-sm font-semibold text-gray-900">Sağlık bilgileri (anamnez)</h3>
+        @php
+            $selectedConditions = collect(old('medical_conditions', $patient->medical_conditions?->map(fn ($c) => $c->value)->all() ?? []));
+        @endphp
+        <fieldset class="mb-4">
+            <legend class="form-label">Sağlık durumu</legend>
+            <div class="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach (App\Enums\MedicalCondition::cases() as $condition)
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" name="medical_conditions[]" value="{{ $condition->value }}" @checked($selectedConditions->contains($condition->value))
+                               class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500">
+                        {{ $condition->label() }}
+                    </label>
+                @endforeach
+            </div>
+            @error('medical_conditions.*')<p class="form-error">{{ $message }}</p>@enderror
+        </fieldset>
         <div class="grid grid-cols-1 gap-4">
             <x-form.textarea name="allergies" label="Alerjiler" :value="$patient->allergies" rows="2" placeholder="Örn. Penisilin, lateks" />
             <x-form.textarea name="medical_notes" label="Tıbbi notlar" :value="$patient->medical_notes" rows="4" placeholder="Kronik hastalıklar, kullanılan ilaçlar vb." />

@@ -6,6 +6,15 @@
     [x-cloak] {
         display: none !important;
     }
+
+    /* Grafik renkleri (renk körlüğü testinden geçmiş sabit sıra; bkz. dataviz paleti) */
+    :root {
+        --series-1: #2a78d6; /* gelir / tahsilat */
+        --series-2: #eb6834; /* gider */
+        --series-negative: #e34948; /* zarar (diverging kutup) */
+        --chart-grid: #e5e7eb;
+        --chart-baseline: #c3c2b7;
+    }
 }
 
 @layer components {

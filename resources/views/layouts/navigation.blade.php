@@ -12,8 +12,10 @@
         'Klinik' => [
             ['treatments.index', 'treatments.*', 'Tedaviler', 'clipboard', $user->can('viewAny', App\Models\Treatment::class)],
             ['payments.index', 'payments.*', 'Ödemeler', 'cash', $user->can('viewAny', App\Models\Payment::class)],
+            ['expenses.index', 'expenses.*', 'Giderler', 'document', $user->can('viewAny', App\Models\Expense::class)],
         ],
         'Yönetim' => [
+            ['reports.index', 'reports.*', 'Raporlar', 'chart', $user->can('viewReports')],
             ['treatment-types.index', 'treatment-types.*', 'İşlem Tanımları', 'list', $user->can('viewAny', App\Models\TreatmentType::class)],
             ['users.index', 'users.*', 'Kullanıcılar', 'user', $user->can('viewAny', App\Models\User::class)],
             ['clinic-settings.edit', 'clinic-settings.*', 'Klinik Bilgileri', 'building', $user->can('update', $clinic)],
@@ -27,7 +29,7 @@
 <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
        class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-slate-900 text-slate-300 transition-transform duration-200 lg:translate-x-0">
     <!-- Logo -->
-    <div class="flex h-16 items-center justify-between gap-2 px-5">
+    <div class="flex h-16 shrink-0 items-center justify-between gap-2 px-5">
         <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-2.5">
             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white">
                 <x-icon name="tooth" class="h-5 w-5" />
@@ -40,17 +42,18 @@
     </div>
 
     <!-- Menü -->
-    <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+    {{-- Menü ekrana sığacak kadar sıkı; çok kısa ekranlarda çubuk göstermeden kaydırılabilir. --}}
+    <nav class="flex-1 space-y-3 overflow-y-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         @foreach ($sections as $heading => $items)
             @php $items = array_filter($items, fn ($item) => $item[4]); @endphp
             @if ($items)
                 <div>
-                    <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $heading }}</p>
-                    <div class="space-y-1">
+                    <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{{ $heading }}</p>
+                    <div class="space-y-0.5">
                         @foreach ($items as [$route, $pattern, $label, $icon])
                             <a href="{{ route($route) }}"
                                @class([
-                                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+                                   'flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition',
                                    'bg-primary-600 text-white' => request()->routeIs($pattern),
                                    'hover:bg-slate-800 hover:text-white' => ! request()->routeIs($pattern),
                                ])>
@@ -65,9 +68,9 @@
     </nav>
 
     <!-- Kullanıcı -->
-    <div class="border-t border-slate-800 p-3">
-        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-800">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-white">
+    <div class="flex items-center gap-1 border-t border-slate-800 p-2">
+        <a href="{{ route('profile.edit') }}" class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-800" title="Profil">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-white">
                 {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
             </span>
             <span class="min-w-0">
@@ -75,11 +78,10 @@
                 <span class="block truncate text-xs text-slate-400">{{ $user->role->label() }}</span>
             </span>
         </a>
-        <form method="POST" action="{{ route('logout') }}" class="mt-1">
+        <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-800 hover:text-white">
+            <button type="submit" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white" title="{{ __('Log Out') }}" aria-label="{{ __('Log Out') }}">
                 <x-icon name="logout" />
-                {{ __('Log Out') }}
             </button>
         </form>
     </div>

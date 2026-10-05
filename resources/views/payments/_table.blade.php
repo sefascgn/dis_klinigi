@@ -24,6 +24,10 @@
                     <td class="hidden lg:table-cell">{{ $payment->receiver?->name ?? '—' }}</td>
                     <td class="whitespace-nowrap text-right font-medium text-emerald-700">@money($payment->amount)</td>
                     <td class="whitespace-nowrap text-right">
+                        <a href="{{ route('print.receipt', $payment) }}" target="_blank" class="btn btn-sm text-gray-600 hover:bg-gray-100 focus:ring-primary-500" title="Makbuz yazdır">
+                            <x-icon name="printer" class="h-4 w-4" />
+                            <span class="sr-only sm:not-sr-only">Makbuz</span>
+                        </a>
                         @can('update', $payment)
                             <x-edit-link :href="route('payments.edit', $payment)" />
                         @endcan

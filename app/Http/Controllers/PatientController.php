@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PatientRequest;
+use App\Models\ClinicSetting;
 use App\Models\Patient;
+use App\Models\Payment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -15,14 +17,22 @@ class PatientController extends Controller
     {
         Gate::authorize('viewAny', Patient::class);
 
+        // Hazır listeler: borçlular (ödeme yetkisi gerekir) ve kontrol zamanı gelenler.
+        $filter = $request->query('filter');
+        if ($filter === 'debtors' && $request->user()->cannot('viewAny', Payment::class)) {
+            abort(403);
+        }
+
         $patients = Patient::query()
             ->search($request->string('q')->trim()->value())
             ->withBalance()
-            ->latest()
+            ->when($filter === 'debtors', fn ($q) => $q->debtors())
+            ->when($filter === 'recall', fn ($q) => $q->dueForRecall(ClinicSetting::current()->recall_months))
+            ->when(! in_array($filter, ['debtors', 'recall'], true), fn ($q) => $q->latest())
             ->paginate(15)
             ->withQueryString();
 
-        return view('patients.index', compact('patients'));
+        return view('patients.index', compact('patients', 'filter'));
     }
 
     public function create(): View
@@ -47,6 +57,7 @@ class PatientController extends Controller
             'appointments' => fn ($q) => $q->with('doctor')->latest('starts_at'),
             'treatments' => fn ($q) => $q->with(['doctor', 'treatmentType'])->latest('treatment_date')->latest('id'),
             'payments' => fn ($q) => $q->with('receiver')->latest('paid_at')->latest('id'),
+            'documents' => fn ($q) => $q->with('uploader')->latest(),
         ]);
 
         return view('patients.show', compact('patient'));

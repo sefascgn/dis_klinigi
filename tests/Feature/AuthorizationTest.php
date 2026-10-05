@@ -32,6 +32,11 @@ class AuthorizationTest extends TestCase
             'işlem tanımları' => ['/treatment-types', 200, 403, 403],
             'kullanıcılar' => ['/users', 200, 403, 403],
             'klinik bilgileri' => ['/settings/clinic', 200, 403, 403],
+            'raporlar' => ['/reports', 200, 403, 403],
+            'giderler' => ['/expenses', 200, 403, 403],
+            'gider ekle' => ['/expenses/create', 200, 403, 403],
+            'kontrolü gelenler' => ['/patients?filter=recall', 200, 200, 200],
+            'borçlular' => ['/patients?filter=debtors', 200, 200, 403],
             'profil' => ['/profile', 200, 200, 200],
         ];
     }

@@ -4,14 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
+use App\Models\Expense;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Services\FinanceReport;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, FinanceReport $financeReport): View
     {
         $user = $request->user();
         $today = today();
@@ -34,6 +36,18 @@ class DashboardController extends Controller
             ];
         }
 
+        // Yönetici için bu ayın gelir–gider özeti ve son 6 ay grafiği.
+        $finance = null;
+        if ($user->can('viewAny', Expense::class)) {
+            $finance = [
+                'totals' => $financeReport->totalsWithComparison($today->copy()->startOfMonth(), $today),
+                'compareLabel' => $financeReport->previousPeriodLabel($today->copy()->startOfMonth(), $today),
+                'monthly' => collect($financeReport->monthly($today, 6))
+                    ->map(fn ($row) => $row + ['tooltip' => $row['month']->translatedFormat('F Y')])
+                    ->all(),
+            ];
+        }
+
         $todaySchedule = $appointments()
             ->onDate($today)
             ->with(['patient', 'doctor'])
@@ -47,6 +61,6 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
-        return view('dashboard', compact('stats', 'revenue', 'todaySchedule', 'upcoming'));
+        return view('dashboard', compact('stats', 'revenue', 'finance', 'todaySchedule', 'upcoming'));
     }
 }

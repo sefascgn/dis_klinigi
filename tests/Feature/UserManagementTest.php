@@ -91,12 +91,13 @@ class UserManagementTest extends TestCase
             'opening_time' => '08:30',
             'closing_time' => '19:00',
             'default_appointment_duration' => 45,
+            'recall_months' => 6,
         ])->assertSessionHasNoErrors();
 
         $this->actingAs($this->admin())->get('/dashboard')->assertSee('Gülüş Diş Kliniği');
 
         $this->actingAs($this->admin())->put('/settings/clinic', [
-            'name' => 'X', 'opening_time' => '18:00', 'closing_time' => '09:00', 'default_appointment_duration' => 30,
+            'name' => 'X', 'opening_time' => '18:00', 'closing_time' => '09:00', 'default_appointment_duration' => 30, 'recall_months' => 6,
         ])->assertSessionHasErrors('closing_time');
 
         $this->actingAs($this->secretary())->put('/settings/clinic', ['name' => 'Y'])->assertForbidden();

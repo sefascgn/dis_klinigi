@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\ClinicSetting;
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
@@ -29,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
         // Geliştirmede N+1 sorgularını ve tanımsız özellik erişimini erkenden yakala.
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventAccessingMissingAttributes(! $this->app->isProduction());
+
+        // Finansal ve klinik performans raporları yalnızca yöneticiye açık.
+        Gate::define('viewReports', fn (User $user) => $user->isAdmin());
 
         View::composer(['layouts.app', 'layouts.navigation', 'layouts.guest'], function ($view) {
             $view->with('clinic', ClinicSetting::current());

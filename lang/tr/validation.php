@@ -123,5 +123,8 @@ return [
         'opening_time' => 'açılış saati',
         'closing_time' => 'kapanış saati',
         'default_appointment_duration' => 'varsayılan randevu süresi',
+        'recall_months' => 'kontrol aralığı',
+        'medical_conditions' => 'sağlık durumları',
+        'medical_conditions.*' => 'sağlık durumu',
     ],
 ];

@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\AppointmentStatus;
 use App\Enums\Gender;
+use App\Enums\MedicalCondition;
 use App\Enums\TreatmentStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +29,7 @@ class Patient extends Model
         'email',
         'address',
         'allergies',
+        'medical_conditions',
         'medical_notes',
     ];
 
@@ -34,12 +38,27 @@ class Patient extends Model
         return [
             'birth_date' => 'date',
             'gender' => Gender::class,
+            'medical_conditions' => AsEnumCollection::of(MedicalCondition::class),
         ];
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PatientDocument::class);
+    }
+
+    /**
+     * Kartta uyarı olarak gösterilecek sağlık bilgisi var mı?
+     */
+    public function hasMedicalAlerts(): bool
+    {
+        return filled($this->allergies) || $this->medical_conditions?->isNotEmpty();
     }
 
     public function appointments(): HasMany
     {
-        return $this->hasMany(Appointment::class);
+        // chaperone: yüklenen randevulara bu hasta ek sorgu olmadan bağlanır.
+        return $this->hasMany(Appointment::class)->chaperone();
     }
 
     public function treatments(): HasMany
@@ -92,6 +111,30 @@ class Patient extends Model
     public function balance(): float
     {
         return round($this->totalTreatmentAmount() - $this->totalPaid(), 2);
+    }
+
+    /**
+     * Kalan borcu olan hastalar (withBalance ile birlikte kullanılır), en yüksek borç önce.
+     */
+    public function scopeDebtors(Builder $query): void
+    {
+        $query->havingRaw('COALESCE(treatments_total, 0) - COALESCE(payments_total, 0) > 0')
+            ->orderByRaw('COALESCE(treatments_total, 0) - COALESCE(payments_total, 0) DESC');
+    }
+
+    /**
+     * Kontrol zamanı gelen hastalar: son tamamlanan randevusu en az $months ay önce
+     * olan ve ileri tarihli aktif randevusu bulunmayanlar.
+     */
+    public function scopeDueForRecall(Builder $query, int $months): void
+    {
+        $cutoff = now()->subMonths($months);
+
+        $query->whereHas('appointments', fn (Builder $q) => $q->where('status', AppointmentStatus::Completed))
+            ->whereDoesntHave('appointments', fn (Builder $q) => $q->where('status', AppointmentStatus::Completed)->where('starts_at', '>', $cutoff))
+            ->whereDoesntHave('appointments', fn (Builder $q) => $q->upcoming())
+            ->withMax(['appointments as last_visit_at' => fn (Builder $q) => $q->where('status', AppointmentStatus::Completed)], 'starts_at')
+            ->orderBy('last_visit_at');
     }
 
     public function scopeSearch(Builder $query, ?string $term): void

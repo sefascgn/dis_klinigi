@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Gender;
+use App\Enums\MedicalCondition;
 use App\Http\Requests\Concerns\AuthorizesResource;
 use App\Models\Patient;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,6 +16,14 @@ class PatientRequest extends FormRequest
     protected string $resourceModel = Patient::class;
 
     protected string $routeParameter = 'patient';
+
+    /**
+     * Hiçbir kutu işaretlenmezse alan hiç gönderilmez; boş liste olarak kaydedilsin.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['medical_conditions' => array_values((array) $this->input('medical_conditions', []))]);
+    }
 
     public function rules(): array
     {
@@ -31,6 +40,8 @@ class PatientRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'allergies' => ['nullable', 'string', 'max:1000'],
+            'medical_conditions' => ['array'],
+            'medical_conditions.*' => ['distinct', Rule::enum(MedicalCondition::class)],
             'medical_notes' => ['nullable', 'string', 'max:5000'],
         ];
     }

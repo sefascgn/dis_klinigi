@@ -19,7 +19,27 @@
         <x-stat-card label="Toplam hasta" :value="number_format($stats['patients'], 0, ',', '.')" icon="users" color="blue" :href="route('patients.index')" />
     </div>
 
-    @if ($revenue)
+    @if ($finance)
+        {{-- Yönetici: bu ay ne geldi, ne gitti, ne kaldı --}}
+        <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:col-span-2 xl:grid-cols-1">
+                @php $net = $finance['totals']['net']['value']; @endphp
+                <x-finance-tile :label="'Bu ay net ('.today()->translatedFormat('F').')'" :value="App\Support\Money::format($net)" :negative="$net < 0"
+                                :change="$finance['totals']['net']['change']" :compare="$finance['compareLabel']" class="ring-1 ring-primary-200" />
+                <x-finance-tile label="Bu ay gelen" :value="App\Support\Money::format($finance['totals']['collected']['value'])" :change="$finance['totals']['collected']['change']" :compare="$finance['compareLabel']" />
+                <x-finance-tile label="Bu ay giden" :value="App\Support\Money::format($finance['totals']['expenses']['value'])" :change="$finance['totals']['expenses']['change']" :compare="$finance['compareLabel']" :up-is-good="false" />
+            </div>
+            <x-card title="Son 6 ay gelen ve giden" class="xl:col-span-3">
+                <x-slot name="actions"><a href="{{ route('reports.index') }}" class="link text-sm">Detaylı rapor</a></x-slot>
+                <x-charts.column-chart :rows="$finance['monthly']" :height="250"
+                    :series="[
+                        ['key' => 'collected', 'label' => 'Gelen (tahsilat)', 'color' => 'var(--series-1)'],
+                        ['key' => 'expenses', 'label' => 'Giden (gider)', 'color' => 'var(--series-2)'],
+                    ]"
+                    :extra="[['key' => 'net', 'label' => 'Net']]" />
+            </x-card>
+        </div>
+    @elseif ($revenue)
         <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <x-stat-card label="Bugünkü gelir" :value="App\Support\Money::format($revenue['daily'])" icon="cash" color="purple"
                          :href="route('payments.index', ['from' => today()->toDateString(), 'to' => today()->toDateString()])" />
@@ -67,6 +87,11 @@
                             <p class="truncate text-xs text-gray-500">{{ $appointment->starts_at->translatedFormat('l H:i') }} · {{ $appointment->doctor->full_name }}</p>
                         </div>
                         <x-status-badge :status="$appointment->status" />
+                        @if ($wa = App\Support\WhatsApp::appointmentReminder($appointment))
+                            <a href="{{ $wa }}" target="_blank" rel="noopener" class="rounded p-1 text-emerald-600 hover:bg-emerald-50" title="WhatsApp ile hatırlat">
+                                <x-icon name="chat" class="h-4 w-4" />
+                            </a>
+                        @endif
                     </li>
                 @empty
                     <li class="px-5 py-10 text-center text-sm text-gray-500">Yaklaşan randevu yok.</li>

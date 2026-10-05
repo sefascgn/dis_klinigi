@@ -23,11 +23,14 @@
 
             <div>
                 <h3 class="mb-3 text-sm font-semibold text-gray-900">Çalışma ve randevu ayarları</h3>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form.input name="opening_time" label="Açılış saati" type="time" :value="substr($setting->opening_time, 0, 5)" required />
                     <x-form.input name="closing_time" label="Kapanış saati" type="time" :value="substr($setting->closing_time, 0, 5)" required />
                     <x-form.input name="default_appointment_duration" label="Varsayılan randevu süresi (dk)" type="number" min="5" max="480"
                                   :value="$setting->default_appointment_duration" required />
+                    <x-form.input name="recall_months" label="Kontrol aralığı (ay)" type="number" min="1" max="24"
+                                  :value="$setting->recall_months" required
+                                  hint="Son ziyaretten bu kadar ay sonra hasta “Kontrolü gelenler” listesine düşer." />
                 </div>
             </div>
 

@@ -38,9 +38,22 @@ php artisan test
 ## Modüller
 
 - **Gösterge paneli:** günlük / bekleyen / tamamlanan randevular, toplam hasta, günlük ve aylık gelir, bugünün programı, yaklaşan randevular
-- **Hastalar:** CRUD, arama, detay kartı (iletişim, alerji uyarısı, hasta geçmişi zaman çizelgesi, randevular, tedaviler, FDI diş şeması, ödemeler, bakiye)
+- **Hastalar:** CRUD, arama, detay kartı (iletişim, sağlık uyarısı, hasta geçmişi zaman çizelgesi, randevular, tedaviler, FDI diş şeması, ödemeler, belgeler, bakiye)
+  - **Anamnez:** diyabet, kan sulandırıcı, hamilelik vb. kontrol listesi; kritik durumlar kırmızı uyarı olarak görünür
+  - **Belgeler:** röntgen, fotoğraf, onam formu (JPG/PNG/WEBP/PDF, 10 MB); dosyalar herkese açık olmayan diskte saklanır ve yalnızca giriş yapmış kullanıcıya sunulur
+  - **Hazır listeler:** "Borçlu hastalar" ve "Kontrolü gelenler" (son ziyaretten bu yana ayarlanabilir süre geçmiş, ileri randevusu olmayanlar)
 - **Doktorlar:** CRUD, uzmanlık, panel hesabına bağlama, doktorun randevuları
-- **Randevular:** oluşturma/düzenleme, durumlar (Bekliyor, Onaylandı, Tamamlandı, İptal edildi), doktor bazında çakışma kontrolü, iptal nedeni
+- **Randevular:** gün / hafta / ay takvimi ve liste; durumlar (Bekliyor, Onaylandı, Tamamlandı, İptal edildi), doktor bazında çakışma kontrolü, iptal nedeni
+- **WhatsApp hatırlatma:** randevu ve kontrol hatırlatmaları için hazır mesajlı `wa.me` bağlantıları (ek servis veya API anahtarı gerekmez)
+- **Yazdırma / PDF:** tedavi planı ve fiyat teklifi, hasta hesap ekstresi, tahsilat makbuzu
+- **Giderler (yönetici):** kira, maaş, laboratuvar, malzeme, fatura vb. kategorilerle gider kaydı; aylık sabit giderler tek tıkla "Tekrarla"
+- **Raporlar (yönetici):** gelir–gider odaklı finans paneli
+  - Net kâr, gelen para (tahsilat), giden para (gider) ve ciro kartları; önceki dönemle karşılaştırma (tam ay → önceki takvim ayı)
+  - Son 12 ay gelen/giden sütun grafiği, aylık net kâr/zarar grafiği, aylık özet tablosu
+  - Gider dağılımı, işlem ve doktor bazında ciro, tahsilat yöntemleri
+  - Gösterge panelinde yönetici için bu ayın özeti ve son 6 ay grafiği
+  - Tanımlar: *Ciro* = tamamlanan tedavi tutarı · *Tahsilat* = alınan ödemeler · *Net* = tahsilat − gider
+- **Hızlı arama:** üst bardan her sayfada hasta araması (klavye ile seçim)
 - **Tedaviler:** hastaya uygulanan işlemler (diş numarası, ücret, durum), randevudan tedavi oluşturma
 - **İşlem tanımları:** Dolgu, Kanal tedavisi, İmplant vb. katalog ve varsayılan ücretler
 - **Ödemeler:** tahsilat, yöntem, tarih aralığı filtreleri, dönem toplamı
@@ -59,7 +72,9 @@ Roller `users.role` alanında tutulur (`App\Enums\UserRole`). Kurallar `app/Poli
 | Randevu durumu değiştirme      | ✓        | ✓        | Yalnızca kendi randevusu |
 | Tedavi kaydı                   | ✓        |          | Yalnızca kendi adına   |
 | Ödemeler                       | ✓        | ✓ (ekleme) |                      |
-| Kullanıcılar, klinik bilgileri, işlem tanımları | ✓ |   |                        |
+| Kullanıcılar, klinik bilgileri, işlem tanımları, raporlar | ✓ |   |                |
+| Belge yükleme                  | ✓        | ✓        | ✓                      |
+| Belge silme                    | ✓        | Kendi yüklediği | Kendi yüklediği |
 
 Pasif hesaplar giriş yapamaz; oturum açıkken pasifleştirilen kullanıcı otomatik olarak çıkış yaptırılır.
 Herkese açık kayıt kapalıdır.
@@ -72,7 +87,8 @@ users ─┬─< doctors (user_id, opsiyonel)
        └─< payments.received_by
 patients ─┬─< appointments >── doctors
           ├─< treatments >──── doctors, treatment_types, appointments (ops.)
-          └─< payments
+          ├─< payments
+          └─< patient_documents
 clinic_settings (tek satır)
 ```
 

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Gender;
+use App\Enums\MedicalCondition;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,6 +23,7 @@ class PatientFactory extends Factory
             'email' => fake()->optional()->safeEmail(),
             'address' => fake()->optional()->address(),
             'allergies' => fake()->optional(0.2)->randomElement(['Penisilin', 'Lateks', 'Lokal anestezik']),
+            'medical_conditions' => fake()->boolean(25) ? fake()->randomElements(MedicalCondition::cases(), fake()->numberBetween(1, 2)) : [],
             'medical_notes' => null,
         ];
     }

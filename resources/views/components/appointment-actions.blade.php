@@ -68,6 +68,12 @@
             @endif
         @endif
 
+        @if ($appointment->isActive() && $appointment->starts_at->isFuture() && ($wa = App\Support\WhatsApp::appointmentReminder($appointment)))
+            <a href="{{ $wa }}" target="_blank" rel="noopener" class="flex items-center gap-2 px-4 py-2 text-emerald-700 hover:bg-emerald-50">
+                <x-icon name="chat" class="h-4 w-4" />WhatsApp ile hatırlat
+            </a>
+        @endif
+
         @if ($appointment->status === AppointmentStatus::Completed)
             @can('create', App\Models\Treatment::class)
                 <a href="{{ route('treatments.create', ['appointment_id' => $appointment->id]) }}" class="block px-4 py-2 hover:bg-gray-50">Tedavi ekle</a>

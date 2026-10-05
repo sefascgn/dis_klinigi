@@ -3,15 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Klinik bilgileri tek satırlık bir kayıtta tutulur.
  */
 class ClinicSetting extends Model
 {
-    private const CACHE_KEY = 'clinic_settings';
-
     protected $fillable = [
         'name',
         'phone',
@@ -22,23 +19,24 @@ class ClinicSetting extends Model
         'opening_time',
         'closing_time',
         'default_appointment_duration',
+        'recall_months',
     ];
 
     protected function casts(): array
     {
         return [
             'default_appointment_duration' => 'integer',
+            'recall_months' => 'integer',
         ];
     }
 
-    protected static function booted(): void
-    {
-        static::saved(fn () => Cache::forget(self::CACHE_KEY));
-    }
-
+    /**
+     * İstek başına bir kez okunur. Kalıcı cache kullanılmaz; böylece şema
+     * değişikliklerinden sonra bayat kayıt riski olmaz.
+     */
     public static function current(): self
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
+        return once(function () {
             $setting = static::query()->firstOrCreate([], ['name' => config('app.name')]);
 
             // Yeni oluşturulduysa veritabanı varsayılanlarını (saatler vb.) modele yükle.

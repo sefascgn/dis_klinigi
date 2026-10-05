@@ -24,6 +24,7 @@ class ClinicSettingRequest extends FormRequest
             'opening_time' => ['required', 'date_format:H:i'],
             'closing_time' => ['required', 'date_format:H:i', 'after:opening_time'],
             'default_appointment_duration' => ['required', 'integer', 'min:5', 'max:480'],
+            'recall_months' => ['required', 'integer', 'min:1', 'max:24'],
         ];
     }
 }
