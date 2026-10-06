@@ -23,6 +23,7 @@ class PatientSearchController extends Controller
         }
 
         $patients = Patient::query()
+            ->visibleTo($request->user())
             ->search($term)
             ->ordered()
             ->limit(10)

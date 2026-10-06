@@ -26,7 +26,7 @@ class ClinicToolsTest extends TestCase
         $patient = Patient::factory()->create(['medical_conditions' => [], 'allergies' => null]);
         $user = $this->secretary();
 
-        $this->actingAs($user)->put("/patients/{$patient->id}", [
+        $this->actingAs($user)->put("/hastalar/{$patient->id}", [
             'first_name' => $patient->first_name,
             'last_name' => $patient->last_name,
             'phone' => $patient->phone,
@@ -35,10 +35,10 @@ class ClinicToolsTest extends TestCase
 
         $patient->refresh();
         $this->assertTrue($patient->medical_conditions->contains(MedicalCondition::BloodThinner));
-        $this->actingAs($user)->get("/patients/{$patient->id}")->assertSee('Sağlık uyarısı')->assertSee('Kan sulandırıcı kullanıyor');
+        $this->actingAs($user)->get("/hastalar/{$patient->id}")->assertSee('Sağlık uyarısı')->assertSee('Kan sulandırıcı kullanıyor');
 
         // Tüm kutular kaldırılınca liste boşalır
-        $this->actingAs($user)->put("/patients/{$patient->id}", [
+        $this->actingAs($user)->put("/hastalar/{$patient->id}", [
             'first_name' => $patient->first_name, 'last_name' => $patient->last_name, 'phone' => $patient->phone,
         ])->assertSessionHasNoErrors();
         $this->assertTrue($patient->fresh()->medical_conditions->isEmpty());
@@ -48,7 +48,7 @@ class ClinicToolsTest extends TestCase
     {
         $patient = Patient::factory()->create();
 
-        $this->actingAs($this->secretary())->put("/patients/{$patient->id}", [
+        $this->actingAs($this->secretary())->put("/hastalar/{$patient->id}", [
             'first_name' => 'A', 'last_name' => 'B', 'phone' => '05551112233', 'medical_conditions' => ['vampirism'],
         ])->assertSessionHasErrors('medical_conditions.0');
     }
@@ -61,12 +61,12 @@ class ClinicToolsTest extends TestCase
         Treatment::factory()->for($paid)->create(['price' => 500]);
         Payment::factory()->for($paid)->create(['amount' => 500]);
 
-        $this->actingAs($this->secretary())->get('/patients?filter=debtors')
+        $this->actingAs($this->secretary())->get('/hastalar?filter=debtors')
             ->assertOk()
             ->assertSee('Borçlu')
             ->assertDontSee('Ödemiş');
 
-        $this->actingAs($this->doctorUser())->get('/patients?filter=debtors')->assertForbidden();
+        $this->actingAs($this->doctorUser())->get('/hastalar?filter=debtors')->assertForbidden();
     }
 
     public function test_recall_filter_lists_patients_due_for_checkup(): void
@@ -81,7 +81,7 @@ class ClinicToolsTest extends TestCase
         Appointment::factory()->for($booked)->at(Carbon::now()->subMonths(8))->status(AppointmentStatus::Completed)->create();
         Appointment::factory()->for($booked)->at(Carbon::now()->addWeek())->create();
 
-        $this->actingAs($this->secretary())->get('/patients?filter=recall')
+        $this->actingAs($this->secretary())->get('/hastalar?filter=recall')
             ->assertOk()
             ->assertSee('Kontrolgelen')
             ->assertDontSee('Yeniziyaret')
@@ -103,7 +103,7 @@ class ClinicToolsTest extends TestCase
         $appointment = Appointment::factory()->at(Carbon::tomorrow()->setTime(10, 0))->create();
         $appointment->patient->update(['phone' => '05321234567']);
 
-        $this->actingAs($this->secretary())->get('/appointments?view=list')
+        $this->actingAs($this->secretary())->get('/randevular?view=list')
             ->assertSee('https://wa.me/905321234567', false)
             ->assertSee('WhatsApp ile hatırlat');
     }
@@ -114,8 +114,8 @@ class ClinicToolsTest extends TestCase
         $appointment = Appointment::factory()->at(Carbon::tomorrow()->setTime(10, 0))->create();
         $user = $this->secretary();
 
-        $this->actingAs($user)->get("/patients/{$appointment->patient_id}")->assertOk()->assertSee('WhatsApp ile hatırlat');
-        $this->actingAs($user)->get("/doctors/{$appointment->doctor_id}")->assertOk()->assertSee('WhatsApp ile hatırlat');
+        $this->actingAs($user)->get("/hastalar/{$appointment->patient_id}")->assertOk()->assertSee('WhatsApp ile hatırlat');
+        $this->actingAs($user)->get("/doktorlar/{$appointment->doctor_id}")->assertOk()->assertSee('WhatsApp ile hatırlat');
     }
 
     public function test_treatment_plan_print_lists_planned_treatments_with_total(): void
@@ -125,7 +125,7 @@ class ClinicToolsTest extends TestCase
         Treatment::factory()->for($patient)->create(['status' => TreatmentStatus::InProgress, 'price' => 4000]);
         Treatment::factory()->for($patient)->create(['status' => TreatmentStatus::Completed, 'price' => 999]);
 
-        $this->actingAs($this->doctorUser())->get("/patients/{$patient->id}/print/plan")
+        $this->actingAs($this->doctorUserOf($patient))->get("/hastalar/{$patient->id}/yazdir/tedavi-plani")
             ->assertOk()
             ->assertSee('Tedavi Planı ve Fiyat Teklifi')
             ->assertSee('10.000,00 ₺')
@@ -138,19 +138,19 @@ class ClinicToolsTest extends TestCase
         Treatment::factory()->for($patient)->create(['price' => 3000, 'treatment_date' => today()->subDays(3)]);
         $payment = Payment::factory()->for($patient)->create(['amount' => 1000, 'paid_at' => today()]);
 
-        $this->actingAs($this->secretary())->get("/patients/{$patient->id}/print/statement")
+        $this->actingAs($this->secretary())->get("/hastalar/{$patient->id}/yazdir/hesap-ekstresi")
             ->assertOk()
             ->assertSee('Kalan borç')
             ->assertSee('2.000,00 ₺');
 
-        $this->actingAs($this->secretary())->get("/payments/{$payment->id}/receipt")
+        $this->actingAs($this->secretary())->get("/odemeler/{$payment->id}/makbuz")
             ->assertOk()
             ->assertSee('Tahsilat Makbuzu')
             ->assertSee('1.000,00 ₺');
 
         $doctor = $this->doctorUser();
-        $this->actingAs($doctor)->get("/patients/{$patient->id}/print/statement")->assertForbidden();
-        $this->actingAs($doctor)->get("/payments/{$payment->id}/receipt")->assertForbidden();
+        $this->actingAs($doctor)->get("/hastalar/{$patient->id}/yazdir/hesap-ekstresi")->assertForbidden();
+        $this->actingAs($doctor)->get("/odemeler/{$payment->id}/makbuz")->assertForbidden();
     }
 
     public function test_reports_show_summary_for_admin_only(): void
@@ -159,13 +159,13 @@ class ClinicToolsTest extends TestCase
         Treatment::factory()->for($patient)->create(['price' => 5000, 'status' => TreatmentStatus::Completed, 'treatment_date' => today()]);
         Payment::factory()->for($patient)->create(['amount' => 2000, 'paid_at' => today()]);
 
-        $this->actingAs($this->admin())->get('/reports')
+        $this->actingAs($this->admin())->get('/raporlar')
             ->assertOk()
             ->assertViewHas('totals', fn ($t) => $t['collected']['value'] === 2000.0 && $t['revenue']['value'] === 5000.0)
             ->assertViewHas('operations', fn ($o) => $o['receivable'] === 3000.0 && $o['debtors'] === 1)
             ->assertSee('Aylık gelen ve giden para');
 
-        $this->actingAs($this->secretary())->get('/reports')->assertForbidden();
-        $this->actingAs($this->doctorUser())->get('/reports')->assertForbidden();
+        $this->actingAs($this->secretary())->get('/raporlar')->assertForbidden();
+        $this->actingAs($this->doctorUser())->get('/raporlar')->assertForbidden();
     }
 }

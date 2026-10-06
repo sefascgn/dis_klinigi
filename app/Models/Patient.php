@@ -44,7 +44,8 @@ class Patient extends Model
 
     public function documents(): HasMany
     {
-        return $this->hasMany(PatientDocument::class);
+        // chaperone: belge yetki kontrolündeki $document->patient ek sorgu atmaz.
+        return $this->hasMany(PatientDocument::class)->chaperone();
     }
 
     /**
@@ -82,11 +83,12 @@ class Patient extends Model
     }
 
     /**
-     * Borç hesabına giren tedaviler (iptal edilenler hariç).
+     * Borç hesabına giren tedaviler: başlamış veya tamamlanmış olanlar.
+     * Planlanan (teklif aşamasındaki) ve iptal edilen tedaviler borç doğurmaz.
      */
     public function billableTreatments(): HasMany
     {
-        return $this->treatments()->where('status', '!=', TreatmentStatus::Cancelled->value);
+        return $this->treatments()->whereIn('status', [TreatmentStatus::InProgress, TreatmentStatus::Completed]);
     }
 
     /**
@@ -135,6 +137,29 @@ class Patient extends Model
             ->whereDoesntHave('appointments', fn (Builder $q) => $q->upcoming())
             ->withMax(['appointments as last_visit_at' => fn (Builder $q) => $q->where('status', AppointmentStatus::Completed)], 'starts_at')
             ->orderBy('last_visit_at');
+    }
+
+    /**
+     * Doktor yalnızca kendi hastalarını görür: kendisinde randevusu veya tedavisi
+     * olan ya da kaydını kendisi açtığı hastalar. Diğer roller tüm hastaları görür.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): void
+    {
+        if (! $user->isDoctor()) {
+            return;
+        }
+
+        $doctorId = $user->doctor?->id ?? 0;
+
+        $query->where(fn (Builder $q) => $q->where('created_by', $user->id)
+            ->orWhereHas('appointments', fn (Builder $a) => $a->where('doctor_id', $doctorId))
+            ->orWhereHas('treatments', fn (Builder $t) => $t->where('doctor_id', $doctorId)));
+    }
+
+    public function isVisibleTo(User $user): bool
+    {
+        return ! $user->isDoctor()
+            || static::withTrashed()->visibleTo($user)->whereKey($this->getKey())->exists();
     }
 
     public function scopeSearch(Builder $query, ?string $term): void

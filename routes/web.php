@@ -17,41 +17,43 @@ use App\Http\Controllers\TreatmentTypeController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/dashboard');
+Route::redirect('/', '/panel');
 
+// Adresler Türkçe, route isimleri İngilizce: view ve controller'lar route() ile isim kullanır.
+// "create" / "edit" adresleri AppServiceProvider'da "yeni" / "duzenle" olarak tanımlı.
 // Yetki kontrolleri her controller içinde ilgili Policy üzerinden yapılır.
 Route::middleware(['auth', 'active'])->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('panel', DashboardController::class)->name('dashboard');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('profil', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('profil', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::get('patients/search', PatientSearchController::class)->name('patients.search');
-    Route::resource('patients', PatientController::class);
+    Route::get('hastalar/ara', PatientSearchController::class)->name('patients.search');
+    Route::resource('hastalar', PatientController::class)->names('patients')->parameters(['hastalar' => 'patient']);
 
-    Route::post('patients/{patient}/documents', [PatientDocumentController::class, 'store'])->name('patients.documents.store');
-    Route::get('documents/{document}', [PatientDocumentController::class, 'show'])->name('documents.show');
-    Route::delete('documents/{document}', [PatientDocumentController::class, 'destroy'])->name('documents.destroy');
+    Route::post('hastalar/{patient}/belgeler', [PatientDocumentController::class, 'store'])->name('patients.documents.store');
+    Route::get('belgeler/{document}', [PatientDocumentController::class, 'show'])->name('documents.show');
+    Route::delete('belgeler/{document}', [PatientDocumentController::class, 'destroy'])->name('documents.destroy');
 
-    Route::get('patients/{patient}/print/plan', [PrintController::class, 'plan'])->name('print.plan');
-    Route::get('patients/{patient}/print/statement', [PrintController::class, 'statement'])->name('print.statement');
-    Route::get('payments/{payment}/receipt', [PrintController::class, 'receipt'])->name('print.receipt');
+    Route::get('hastalar/{patient}/yazdir/tedavi-plani', [PrintController::class, 'plan'])->name('print.plan');
+    Route::get('hastalar/{patient}/yazdir/hesap-ekstresi', [PrintController::class, 'statement'])->name('print.statement');
+    Route::get('odemeler/{payment}/makbuz', [PrintController::class, 'receipt'])->name('print.receipt');
 
-    Route::get('reports', ReportController::class)->name('reports.index');
+    Route::get('raporlar', ReportController::class)->name('reports.index');
 
-    Route::resource('doctors', DoctorController::class);
+    Route::resource('doktorlar', DoctorController::class)->names('doctors')->parameters(['doktorlar' => 'doctor']);
 
-    Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
-    Route::resource('appointments', AppointmentController::class)->except('show');
+    Route::patch('randevular/{appointment}/durum', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
+    Route::resource('randevular', AppointmentController::class)->except('show')->names('appointments')->parameters(['randevular' => 'appointment']);
 
-    Route::resource('treatment-types', TreatmentTypeController::class)->except('show');
-    Route::resource('treatments', TreatmentController::class)->except('show');
-    Route::resource('payments', PaymentController::class)->except('show');
-    Route::resource('expenses', ExpenseController::class)->except('show');
-    Route::resource('users', UserController::class)->except('show');
+    Route::resource('islem-turleri', TreatmentTypeController::class)->except('show')->names('treatment-types')->parameters(['islem-turleri' => 'treatment_type']);
+    Route::resource('tedaviler', TreatmentController::class)->except('show')->names('treatments')->parameters(['tedaviler' => 'treatment']);
+    Route::resource('odemeler', PaymentController::class)->except('show')->names('payments')->parameters(['odemeler' => 'payment']);
+    Route::resource('giderler', ExpenseController::class)->except('show')->names('expenses')->parameters(['giderler' => 'expense']);
+    Route::resource('kullanicilar', UserController::class)->except('show')->names('users')->parameters(['kullanicilar' => 'user']);
 
-    Route::get('settings/clinic', [ClinicSettingController::class, 'edit'])->name('clinic-settings.edit');
-    Route::put('settings/clinic', [ClinicSettingController::class, 'update'])->name('clinic-settings.update');
+    Route::get('ayarlar/klinik', [ClinicSettingController::class, 'edit'])->name('clinic-settings.edit');
+    Route::put('ayarlar/klinik', [ClinicSettingController::class, 'update'])->name('clinic-settings.update');
 });
 
 require __DIR__.'/auth.php';

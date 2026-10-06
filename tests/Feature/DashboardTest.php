@@ -23,7 +23,7 @@ class DashboardTest extends TestCase
         $upcoming = Appointment::factory()->at(today()->addDays(2)->setTime(9, 0))->create();
         Payment::factory()->create(['amount' => 750, 'paid_at' => today()]);
 
-        $response = $this->actingAs($this->secretary())->get('/dashboard');
+        $response = $this->actingAs($this->secretary())->get('/panel');
 
         $response->assertOk()
             ->assertViewHas('stats', fn ($stats) => $stats['today'] === 2 && $stats['completed_today'] === 1 && $stats['pending'] === 2)
@@ -38,7 +38,7 @@ class DashboardTest extends TestCase
         Appointment::factory()->for($user->doctor)->at(today()->setTime(23, 0))->create();
         Appointment::factory()->at(today()->setTime(23, 0))->create();
 
-        $this->actingAs($user)->get('/dashboard')
+        $this->actingAs($user)->get('/panel')
             ->assertOk()
             ->assertViewHas('stats', fn ($stats) => $stats['today'] === 1)
             ->assertViewHas('revenue', null)

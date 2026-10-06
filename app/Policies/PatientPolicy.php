@@ -13,9 +13,12 @@ class PatientPolicy
         return true;
     }
 
+    /**
+     * Doktor yalnızca kendi hastasının kartını görür (bkz. Patient::scopeVisibleTo).
+     */
     public function view(User $user, Patient $patient): bool
     {
-        return true;
+        return $patient->isVisibleTo($user);
     }
 
     public function create(User $user): bool
@@ -25,7 +28,8 @@ class PatientPolicy
 
     public function update(User $user, Patient $patient): bool
     {
-        return $user->hasRole(UserRole::Admin, UserRole::Secretary, UserRole::Doctor);
+        return $user->hasRole(UserRole::Admin, UserRole::Secretary, UserRole::Doctor)
+            && $patient->isVisibleTo($user);
     }
 
     public function delete(User $user, Patient $patient): bool

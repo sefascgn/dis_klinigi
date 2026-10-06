@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
+use App\Models\ClinicSetting;
 use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,7 +33,7 @@ class AppointmentTest extends TestCase
         $start = Carbon::tomorrow()->setTime(10, 0);
         $user = $this->secretary();
 
-        $this->actingAs($user)->post('/appointments', $this->payload($doctor, $patient, $start, 45))
+        $this->actingAs($user)->post('/randevular', $this->payload($doctor, $patient, $start, 45))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('appointments.index', ['date' => $start->toDateString()]));
 
@@ -49,15 +50,15 @@ class AppointmentTest extends TestCase
         Appointment::factory()->for($doctor)->at($start, 60)->create();
 
         $this->actingAs($this->secretary())
-            ->post('/appointments', $this->payload($doctor, Patient::factory()->create(), $start->copy()->addMinutes(30)))
+            ->post('/randevular', $this->payload($doctor, Patient::factory()->create(), $start->copy()->addMinutes(30)))
             ->assertSessionHasErrors('starts_at');
 
         // Bitişik randevu ve farklı doktor serbest
         $this->actingAs($this->secretary())
-            ->post('/appointments', $this->payload($doctor, Patient::factory()->create(), $start->copy()->addHour()))
+            ->post('/randevular', $this->payload($doctor, Patient::factory()->create(), $start->copy()->addHour()))
             ->assertSessionHasNoErrors();
         $this->actingAs($this->secretary())
-            ->post('/appointments', $this->payload(Doctor::factory()->create(), Patient::factory()->create(), $start))
+            ->post('/randevular', $this->payload(Doctor::factory()->create(), Patient::factory()->create(), $start))
             ->assertSessionHasNoErrors();
     }
 
@@ -68,13 +69,13 @@ class AppointmentTest extends TestCase
         Appointment::factory()->for($doctor)->at($start)->status(AppointmentStatus::Cancelled)->create();
 
         $this->actingAs($this->secretary())
-            ->post('/appointments', $this->payload($doctor, Patient::factory()->create(), $start))
+            ->post('/randevular', $this->payload($doctor, Patient::factory()->create(), $start))
             ->assertSessionHasNoErrors();
     }
 
     public function test_appointment_validation(): void
     {
-        $this->actingAs($this->secretary())->post('/appointments', [
+        $this->actingAs($this->secretary())->post('/randevular', [
             'patient_id' => 999,
             'doctor_id' => Doctor::factory()->inactive()->create()->id,
             'starts_at' => now()->subDay()->format('Y-m-d\TH:i'),
@@ -86,7 +87,7 @@ class AppointmentTest extends TestCase
     {
         $appointment = Appointment::factory()->at(Carbon::tomorrow()->setTime(10, 0))->create();
 
-        $this->actingAs($this->secretary())->put("/appointments/{$appointment->id}", [
+        $this->actingAs($this->secretary())->put("/randevular/{$appointment->id}", [
             ...$this->payload($appointment->doctor, $appointment->patient, Carbon::tomorrow()->setTime(10, 15)),
             'status' => 'confirmed',
         ])->assertSessionHasNoErrors();
@@ -101,10 +102,10 @@ class AppointmentTest extends TestCase
         $appointment = Appointment::factory()->create();
         $user = $this->secretary();
 
-        $this->actingAs($user)->patch("/appointments/{$appointment->id}/status", ['status' => 'cancelled'])
+        $this->actingAs($user)->patch("/randevular/{$appointment->id}/durum", ['status' => 'cancelled'])
             ->assertSessionHasErrors('cancellation_reason');
 
-        $this->actingAs($user)->patch("/appointments/{$appointment->id}/status", ['status' => 'cancelled', 'cancellation_reason' => 'Hasta aradı'])
+        $this->actingAs($user)->patch("/randevular/{$appointment->id}/durum", ['status' => 'cancelled', 'cancellation_reason' => 'Hasta aradı'])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(AppointmentStatus::Cancelled, $appointment->fresh()->status);
@@ -117,7 +118,7 @@ class AppointmentTest extends TestCase
         $cancelled = Appointment::factory()->at($start)->status(AppointmentStatus::Cancelled)->create();
         Appointment::factory()->for($cancelled->doctor)->at($start)->create();
 
-        $this->actingAs($this->secretary())->patch("/appointments/{$cancelled->id}/status", ['status' => 'pending'])
+        $this->actingAs($this->secretary())->patch("/randevular/{$cancelled->id}/durum", ['status' => 'pending'])
             ->assertSessionHas('error');
 
         $this->assertSame(AppointmentStatus::Cancelled, $cancelled->fresh()->status);
@@ -130,14 +131,14 @@ class AppointmentTest extends TestCase
         $own = Appointment::factory()->for($user->doctor)->at($date)->create();
         $other = Appointment::factory()->at($date)->create();
 
-        $this->actingAs($user)->get('/appointments?date='.$date->toDateString())
+        $this->actingAs($user)->get('/randevular?date='.$date->toDateString())
             ->assertOk()
             ->assertSee($own->patient->full_name)
             ->assertDontSee($other->patient->full_name);
 
-        $this->actingAs($user)->patch("/appointments/{$own->id}/status", ['status' => 'completed'])->assertSessionHasNoErrors();
-        $this->actingAs($user)->patch("/appointments/{$other->id}/status", ['status' => 'completed'])->assertForbidden();
-        $this->actingAs($user)->put("/appointments/{$own->id}", [])->assertForbidden();
+        $this->actingAs($user)->patch("/randevular/{$own->id}/durum", ['status' => 'completed'])->assertSessionHasNoErrors();
+        $this->actingAs($user)->patch("/randevular/{$other->id}/durum", ['status' => 'completed'])->assertForbidden();
+        $this->actingAs($user)->put("/randevular/{$own->id}", [])->assertForbidden();
 
         $this->assertSame(AppointmentStatus::Completed, $own->fresh()->status);
     }
@@ -147,7 +148,7 @@ class AppointmentTest extends TestCase
         $pending = Appointment::factory()->at(Carbon::now()->addDays(3))->create();
         $cancelled = Appointment::factory()->at(Carbon::now()->addDays(4))->status(AppointmentStatus::Cancelled)->create();
 
-        $this->actingAs($this->secretary())->get('/appointments?view=list&status=pending')
+        $this->actingAs($this->secretary())->get('/randevular?view=list&status=pending')
             ->assertOk()
             ->assertSee($pending->patient->full_name)
             ->assertDontSee($cancelled->patient->full_name);
@@ -160,7 +161,7 @@ class AppointmentTest extends TestCase
         $appointment = Appointment::factory()->for($doctor)->at($date->copy()->setTime(14, 30))->create();
         $other = Appointment::factory()->at($date->copy()->addDay()->setTime(10, 0))->create();
 
-        $this->actingAs($this->secretary())->get('/appointments?view=day&date='.$date->toDateString())
+        $this->actingAs($this->secretary())->get('/randevular?view=day&date='.$date->toDateString())
             ->assertOk()
             ->assertSee('Kemal Sunal')
             ->assertSee($appointment->patient->full_name)
@@ -175,7 +176,7 @@ class AppointmentTest extends TestCase
         $sunday = Appointment::factory()->at($monday->copy()->addDays(6)->setTime(11, 0))->create();
         $nextMonday = Appointment::factory()->at($monday->copy()->addWeek()->setTime(11, 0))->create();
 
-        $this->actingAs($this->secretary())->get('/appointments?view=week&date='.$monday->copy()->addDays(2)->toDateString())
+        $this->actingAs($this->secretary())->get('/randevular?view=week&date='.$monday->copy()->addDays(2)->toDateString())
             ->assertOk()
             ->assertViewHas('from', fn ($from) => $from->eq($monday))
             ->assertSee($sunday->patient->full_name)
@@ -189,7 +190,7 @@ class AppointmentTest extends TestCase
             Appointment::factory()->at($day->copy()->setTime($hour, 0))->create();
         }
 
-        $this->actingAs($this->secretary())->get('/appointments?view=month&date='.$day->toDateString())
+        $this->actingAs($this->secretary())->get('/randevular?view=month&date='.$day->toDateString())
             ->assertOk()
             ->assertViewHas('appointments', fn ($appointments) => $appointments->count() === 4)
             ->assertSee('+1 randevu daha');
@@ -200,7 +201,7 @@ class AppointmentTest extends TestCase
         $user = $this->doctorUser();
         $other = Doctor::factory()->create(['first_name' => 'Başka', 'last_name' => 'Doktor']);
 
-        $this->actingAs($user)->get('/appointments?view=day')
+        $this->actingAs($user)->get('/randevular?view=day')
             ->assertOk()
             ->assertViewHas('columns', fn ($columns) => $columns->pluck('id')->all() === [$user->doctor->id])
             ->assertDontSee('Başka Doktor');
@@ -208,7 +209,7 @@ class AppointmentTest extends TestCase
 
     public function test_invalid_view_is_rejected(): void
     {
-        $this->actingAs($this->secretary())->from('/dashboard')->get('/appointments?view=year')
+        $this->actingAs($this->secretary())->from('/panel')->get('/randevular?view=year')
             ->assertSessionHasErrors('view');
     }
 
@@ -216,7 +217,7 @@ class AppointmentTest extends TestCase
     {
         $date = Carbon::tomorrow()->toDateString();
 
-        $this->actingAs($this->secretary())->get("/appointments/create?date={$date}&time=14:30")
+        $this->actingAs($this->secretary())->get("/randevular/yeni?date={$date}&time=14:30")
             ->assertOk()
             ->assertSee('value="'.$date.'T14:30"', false);
     }
@@ -225,9 +226,32 @@ class AppointmentTest extends TestCase
     {
         $appointment = Appointment::factory()->create();
 
-        $this->actingAs($this->secretary())->delete("/appointments/{$appointment->id}")->assertForbidden();
-        $this->actingAs($this->admin())->delete("/appointments/{$appointment->id}")->assertRedirect();
+        $this->actingAs($this->secretary())->delete("/randevular/{$appointment->id}")->assertForbidden();
+        $this->actingAs($this->admin())->delete("/randevular/{$appointment->id}")->assertRedirect();
 
         $this->assertModelMissing($appointment);
+    }
+
+    public function test_clinic_default_duration_and_existing_custom_duration_are_accepted(): void
+    {
+        ClinicSetting::current()->update(['default_appointment_duration' => 25]);
+        $doctor = Doctor::factory()->create();
+        $patient = Patient::factory()->create();
+        $user = $this->secretary();
+
+        $this->actingAs($user)->post('/randevular', $this->payload($doctor, $patient, now()->addDay()->setTime(10, 0), 25))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(25, Appointment::firstOrFail()->durationInMinutes());
+
+        // Standart dışı süreli mevcut randevu, süresi değiştirilmeden düzenlenebilir.
+        $custom = Appointment::factory()->at(now()->addDays(2)->setTime(14, 0), 40)->create();
+        $this->actingAs($user)->put("/randevular/{$custom->id}", [
+            ...$this->payload($custom->doctor, $custom->patient, $custom->starts_at, 40),
+            'status' => AppointmentStatus::Confirmed->value,
+        ])->assertSessionHasNoErrors();
+
+        // Listede olmayan keyfi süre hâlâ reddedilir.
+        $this->actingAs($user)->post('/randevular', $this->payload($doctor, $patient, now()->addDays(3)->setTime(10, 0), 37))
+            ->assertSessionHasErrors('duration');
     }
 }

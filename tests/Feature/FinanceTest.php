@@ -24,7 +24,7 @@ class FinanceTest extends TestCase
     {
         $admin = $this->admin();
 
-        $this->actingAs($admin)->post('/expenses', [
+        $this->actingAs($admin)->post('/giderler', [
             'category' => 'rent',
             'description' => 'Ekim kirası',
             'amount' => '18000',
@@ -39,7 +39,7 @@ class FinanceTest extends TestCase
 
     public function test_expense_validation(): void
     {
-        $this->actingAs($this->admin())->post('/expenses', [
+        $this->actingAs($this->admin())->post('/giderler', [
             'category' => 'yacht',
             'description' => '',
             'amount' => 0,
@@ -53,9 +53,9 @@ class FinanceTest extends TestCase
         $expense = Expense::factory()->create();
 
         foreach ([$this->secretary(), $this->doctorUser()] as $user) {
-            $this->actingAs($user)->get('/expenses')->assertForbidden();
-            $this->actingAs($user)->post('/expenses', [])->assertForbidden();
-            $this->actingAs($user)->delete("/expenses/{$expense->id}")->assertForbidden();
+            $this->actingAs($user)->get('/giderler')->assertForbidden();
+            $this->actingAs($user)->post('/giderler', [])->assertForbidden();
+            $this->actingAs($user)->delete("/giderler/{$expense->id}")->assertForbidden();
         }
     }
 
@@ -63,7 +63,7 @@ class FinanceTest extends TestCase
     {
         $expense = Expense::factory()->create(['description' => 'Aylık kira', 'spent_at' => today()->subMonth()]);
 
-        $this->actingAs($this->admin())->get("/expenses/create?copy={$expense->id}")
+        $this->actingAs($this->admin())->get("/giderler/yeni?copy={$expense->id}")
             ->assertOk()
             ->assertSee('value="Aylık kira"', false)
             ->assertSee('value="'.today()->toDateString().'"', false);
@@ -75,7 +75,7 @@ class FinanceTest extends TestCase
         Expense::factory()->create(['category' => 'lab', 'amount' => 2500, 'spent_at' => today()]);
         Expense::factory()->create(['category' => 'lab', 'amount' => 99999, 'spent_at' => today()->subYear()]);
 
-        $this->actingAs($this->admin())->get('/expenses?from='.today()->toDateString().'&to='.today()->toDateString())
+        $this->actingAs($this->admin())->get('/giderler?from='.today()->toDateString().'&to='.today()->toDateString())
             ->assertOk()
             ->assertViewHas('total', 12500.0)
             ->assertSee('Laboratuvar');
@@ -133,7 +133,7 @@ class FinanceTest extends TestCase
         Payment::factory()->create(['amount' => 50000, 'paid_at' => today()]);
         Expense::factory()->create(['amount' => 70000, 'spent_at' => today(), 'category' => 'salary']);
 
-        $this->actingAs($this->admin())->get('/reports')
+        $this->actingAs($this->admin())->get('/raporlar')
             ->assertOk()
             ->assertSee('Aylık gelen ve giden para')
             ->assertSee('Aylık net kâr / zarar')
@@ -145,8 +145,8 @@ class FinanceTest extends TestCase
 
     public function test_dashboard_finance_block_is_admin_only(): void
     {
-        $this->actingAs($this->admin())->get('/dashboard')->assertSee('Son 6 ay gelen ve giden');
-        $this->actingAs($this->secretary())->get('/dashboard')->assertDontSee('Son 6 ay gelen ve giden')->assertSee('Bugünkü gelir');
+        $this->actingAs($this->admin())->get('/panel')->assertSee('Son 6 ay gelen ve giden');
+        $this->actingAs($this->secretary())->get('/panel')->assertDontSee('Son 6 ay gelen ve giden')->assertSee('Bugünkü gelir');
     }
 
     public function test_chart_scale_and_compact_money(): void
@@ -164,5 +164,17 @@ class FinanceTest extends TestCase
         $this->assertSame('1,2 Mn ₺', Money::compact(1200000));
         $this->assertSame('950 ₺', Money::compact(950));
         $this->assertSame('50 B ₺', Money::compact(50000));
+    }
+
+    public function test_deleted_expense_is_kept_but_excluded_from_totals(): void
+    {
+        $expense = Expense::factory()->create(['amount' => 700, 'spent_at' => today()]);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->delete("/giderler/{$expense->id}")->assertRedirect();
+
+        $this->assertSoftDeleted($expense);
+        $this->assertSame($admin->id, $expense->fresh()->deleted_by);
+        $this->assertSame(0.0, (float) Expense::sum('amount'));
     }
 }

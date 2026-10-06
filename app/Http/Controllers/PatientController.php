@@ -24,6 +24,7 @@ class PatientController extends Controller
         }
 
         $patients = Patient::query()
+            ->visibleTo($request->user())
             ->search($request->string('q')->trim()->value())
             ->withBalance()
             ->when($filter === 'debtors', fn ($q) => $q->debtors())
@@ -44,7 +45,9 @@ class PatientController extends Controller
 
     public function store(PatientRequest $request): RedirectResponse
     {
-        $patient = Patient::create($request->validated());
+        $patient = new Patient($request->validated());
+        $patient->created_by = $request->user()->id;
+        $patient->save();
 
         return redirect()->route('patients.show', $patient)->with('success', 'Hasta kaydı oluşturuldu.');
     }

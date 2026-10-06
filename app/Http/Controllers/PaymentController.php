@@ -82,6 +82,8 @@ class PaymentController extends Controller
     {
         Gate::authorize('delete', $payment);
 
+        // Mali kayıt: kalıcı silinmez, kimin sildiği saklanır.
+        $payment->forceFill(['deleted_by' => request()->user()->id])->save();
         $payment->delete();
 
         return back()->with('success', 'Ödeme kaydı silindi.');

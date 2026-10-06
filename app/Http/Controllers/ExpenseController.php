@@ -89,6 +89,8 @@ class ExpenseController extends Controller
     {
         Gate::authorize('delete', $expense);
 
+        // Mali kayıt: kalıcı silinmez, kimin sildiği saklanır.
+        $expense->forceFill(['deleted_by' => request()->user()->id])->save();
         $expense->delete();
 
         return back()->with('success', 'Gider silindi.');

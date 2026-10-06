@@ -18,7 +18,7 @@ class PaymentTest extends TestCase
         Treatment::factory()->for($patient)->create(['price' => 5000]);
         $user = $this->secretary();
 
-        $this->actingAs($user)->post('/payments', [
+        $this->actingAs($user)->post('/odemeler', [
             'patient_id' => $patient->id,
             'amount' => '2000',
             'method' => 'credit_card',
@@ -33,7 +33,7 @@ class PaymentTest extends TestCase
 
     public function test_payment_validation(): void
     {
-        $this->actingAs($this->secretary())->post('/payments', [
+        $this->actingAs($this->secretary())->post('/odemeler', [
             'patient_id' => Patient::factory()->create()->id,
             'amount' => 0,
             'method' => 'bitcoin',
@@ -46,20 +46,25 @@ class PaymentTest extends TestCase
         $payment = Payment::factory()->create();
         $user = $this->doctorUser();
 
-        $this->actingAs($user)->get('/payments')->assertForbidden();
-        $this->actingAs($user)->post('/payments', [])->assertForbidden();
-        $this->actingAs($user)->get("/payments/{$payment->id}/edit")->assertForbidden();
+        $this->actingAs($user)->get('/odemeler')->assertForbidden();
+        $this->actingAs($user)->post('/odemeler', [])->assertForbidden();
+        $this->actingAs($user)->get("/odemeler/{$payment->id}/duzenle")->assertForbidden();
     }
 
     public function test_only_admin_can_edit_or_delete_payment(): void
     {
         $payment = Payment::factory()->create();
 
-        $this->actingAs($this->secretary())->get("/payments/{$payment->id}/edit")->assertForbidden();
-        $this->actingAs($this->secretary())->delete("/payments/{$payment->id}")->assertForbidden();
+        $this->actingAs($this->secretary())->get("/odemeler/{$payment->id}/duzenle")->assertForbidden();
+        $this->actingAs($this->secretary())->delete("/odemeler/{$payment->id}")->assertForbidden();
 
-        $this->actingAs($this->admin())->delete("/payments/{$payment->id}")->assertRedirect();
-        $this->assertModelMissing($payment);
+        $admin = $this->admin();
+        $this->actingAs($admin)->delete("/odemeler/{$payment->id}")->assertRedirect();
+
+        // Mali kayıt kalıcı silinmez; kimin sildiği tutulur ve bakiyeye girmez.
+        $this->assertSoftDeleted($payment);
+        $this->assertSame($admin->id, $payment->fresh()->deleted_by);
+        $this->assertSame(0.0, $payment->patient->totalPaid());
     }
 
     public function test_index_filters_by_date_range_and_shows_total(): void
@@ -69,7 +74,7 @@ class PaymentTest extends TestCase
         Payment::factory()->create(['amount' => 9999, 'paid_at' => today()->subMonths(2)]);
 
         $this->actingAs($this->secretary())
-            ->get('/payments?from='.today()->toDateString().'&to='.today()->toDateString())
+            ->get('/odemeler?from='.today()->toDateString().'&to='.today()->toDateString())
             ->assertOk()
             ->assertSee('1.500,00 ₺')
             ->assertDontSee('9.999,00 ₺');
@@ -78,8 +83,8 @@ class PaymentTest extends TestCase
     public function test_invalid_date_range_is_rejected(): void
     {
         $this->actingAs($this->secretary())
-            ->from('/payments')
-            ->get('/payments?from=2026-05-10&to=2026-05-01')
+            ->from('/odemeler')
+            ->get('/odemeler?from=2026-05-10&to=2026-05-01')
             ->assertSessionHasErrors('to');
     }
 }

@@ -29,7 +29,13 @@
                 <tbody>
                     @forelse ($doctors as $doctor)
                         <tr>
-                            <td><a href="{{ route('doctors.show', $doctor) }}" class="link">{{ $doctor->full_name }}</a></td>
+                            <td>
+                                @can('view', $doctor)
+                                    <a href="{{ route('doctors.show', $doctor) }}" class="link">{{ $doctor->full_name }}</a>
+                                @else
+                                    {{ $doctor->full_name }}
+                                @endcan
+                            </td>
                             <td>{{ $doctor->specialty ?? '—' }}</td>
                             <td class="hidden md:table-cell">
                                 <p>{{ $doctor->phone ?? '—' }}</p>

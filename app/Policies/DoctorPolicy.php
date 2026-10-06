@@ -12,9 +12,12 @@ class DoctorPolicy
         return true;
     }
 
+    /**
+     * Doktor sayfası randevu listesi içerir; doktor yalnızca kendi sayfasını açabilir.
+     */
     public function view(User $user, Doctor $doctor): bool
     {
-        return true;
+        return ! $user->isDoctor() || $user->doctor?->id === $doctor->id;
     }
 
     public function create(User $user): bool

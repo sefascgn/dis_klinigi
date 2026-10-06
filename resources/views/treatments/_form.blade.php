@@ -2,15 +2,18 @@
 
 @php
     $prices = $treatmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->default_price])->all();
+    // Kayıtlı tedavinin ücretini doktor değiştiremez (bkz. TreatmentRequest::after).
+    $priceLocked = $treatment->exists && auth()->user()->isDoctor();
 @endphp
 
 {{-- İşlem seçilince fiyat boşsa veya önceki varsayılan fiyattaysa varsayılan ücret otomatik gelir. --}}
 <div class="space-y-5" x-data="{
         prices: @js($prices),
         price: @js((string) old('price', $treatment->price ?? '')),
+        locked: @js($priceLocked),
         pick(id) {
             const current = Object.values(this.prices).map(String);
-            if (this.price === '' || current.includes(String(this.price))) {
+            if (! this.locked && (this.price === '' || current.includes(String(this.price)))) {
                 this.price = this.prices[id] ?? '';
             }
         },
@@ -42,8 +45,9 @@
 
         <div>
             <label for="price" class="form-label">Ücret (₺) <span class="text-red-500">*</span></label>
-            <input type="number" id="price" name="price" x-model="price" step="0.01" min="0" required
-                   class="form-input @error('price') border-red-400 @enderror">
+            <input type="number" id="price" name="price" x-model="price" step="0.01" min="0" required @readonly($priceLocked)
+                   @class(['form-input', 'border-red-400' => $errors->has('price'), 'bg-gray-50 text-gray-500' => $priceLocked])>
+            @if ($priceLocked)<p class="mt-1 text-xs text-gray-500">Ücreti yalnızca yönetici değiştirebilir.</p>@endif
             @error('price')<p class="form-error">{{ $message }}</p>@enderror
         </div>
         <x-form.input name="treatment_date" label="Tarih" type="date" required :value="$treatment->treatment_date?->toDateString()" />

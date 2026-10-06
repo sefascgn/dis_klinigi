@@ -18,26 +18,26 @@ class AuthorizationTest extends TestCase
     {
         // [url, admin, secretary, doctor]
         return [
-            'dashboard' => ['/dashboard', 200, 200, 200],
-            'hastalar' => ['/patients', 200, 200, 200],
-            'hasta ekle' => ['/patients/create', 200, 200, 200],
-            'doktorlar' => ['/doctors', 200, 200, 200],
-            'doktor ekle' => ['/doctors/create', 200, 403, 403],
-            'randevular' => ['/appointments', 200, 200, 200],
-            'randevu ekle' => ['/appointments/create', 200, 200, 403],
-            'tedaviler' => ['/treatments', 200, 200, 200],
-            'tedavi ekle' => ['/treatments/create', 200, 403, 200],
-            'ödemeler' => ['/payments', 200, 200, 403],
-            'ödeme al' => ['/payments/create', 200, 200, 403],
-            'işlem tanımları' => ['/treatment-types', 200, 403, 403],
-            'kullanıcılar' => ['/users', 200, 403, 403],
-            'klinik bilgileri' => ['/settings/clinic', 200, 403, 403],
-            'raporlar' => ['/reports', 200, 403, 403],
-            'giderler' => ['/expenses', 200, 403, 403],
-            'gider ekle' => ['/expenses/create', 200, 403, 403],
-            'kontrolü gelenler' => ['/patients?filter=recall', 200, 200, 200],
-            'borçlular' => ['/patients?filter=debtors', 200, 200, 403],
-            'profil' => ['/profile', 200, 200, 200],
+            'dashboard' => ['/panel', 200, 200, 200],
+            'hastalar' => ['/hastalar', 200, 200, 200],
+            'hasta ekle' => ['/hastalar/yeni', 200, 200, 200],
+            'doktorlar' => ['/doktorlar', 200, 200, 200],
+            'doktor ekle' => ['/doktorlar/yeni', 200, 403, 403],
+            'randevular' => ['/randevular', 200, 200, 200],
+            'randevu ekle' => ['/randevular/yeni', 200, 200, 403],
+            'tedaviler' => ['/tedaviler', 200, 200, 200],
+            'tedavi ekle' => ['/tedaviler/yeni', 200, 403, 200],
+            'ödemeler' => ['/odemeler', 200, 200, 403],
+            'ödeme al' => ['/odemeler/yeni', 200, 200, 403],
+            'işlem tanımları' => ['/islem-turleri', 200, 403, 403],
+            'kullanıcılar' => ['/kullanicilar', 200, 403, 403],
+            'klinik bilgileri' => ['/ayarlar/klinik', 200, 403, 403],
+            'raporlar' => ['/raporlar', 200, 403, 403],
+            'giderler' => ['/giderler', 200, 403, 403],
+            'gider ekle' => ['/giderler/yeni', 200, 403, 403],
+            'kontrolü gelenler' => ['/hastalar?filter=recall', 200, 200, 200],
+            'borçlular' => ['/hastalar?filter=debtors', 200, 200, 403],
+            'profil' => ['/profil', 200, 200, 200],
         ];
     }
 
@@ -51,8 +51,8 @@ class AuthorizationTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
-        foreach (['/patients', '/appointments', '/payments', '/users'] as $url) {
-            $this->get($url)->assertRedirect('/login');
+        foreach (['/hastalar', '/randevular', '/odemeler', '/kullanicilar'] as $url) {
+            $this->get($url)->assertRedirect('/giris');
         }
     }
 
@@ -60,7 +60,7 @@ class AuthorizationTest extends TestCase
     {
         $user = User::factory()->inactive()->create();
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+        $this->post('/giris', ['email' => $user->email, 'password' => 'password'])
             ->assertSessionHasErrors('email');
 
         $this->assertGuest();
@@ -69,22 +69,22 @@ class AuthorizationTest extends TestCase
     public function test_user_deactivated_during_session_is_logged_out(): void
     {
         $user = $this->secretary();
-        $this->actingAs($user)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->get('/panel')->assertOk();
 
         $user->forceFill(['is_active' => false])->save();
 
-        $this->actingAs($user->fresh())->get('/dashboard')->assertRedirect('/login');
+        $this->actingAs($user->fresh())->get('/panel')->assertRedirect('/giris');
         $this->assertGuest();
     }
 
     public function test_menu_only_shows_permitted_modules(): void
     {
-        $this->actingAs($this->doctorUser())->get('/dashboard')
+        $this->actingAs($this->doctorUser())->get('/panel')
             ->assertSee('Tedaviler')
             ->assertDontSee('Kullanıcılar')
             ->assertDontSee('Ödemeler');
 
-        $this->actingAs($this->admin())->get('/dashboard')
+        $this->actingAs($this->admin())->get('/panel')
             ->assertSee('Kullanıcılar')
             ->assertSee('Klinik Bilgileri');
     }

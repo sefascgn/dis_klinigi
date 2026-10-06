@@ -11,7 +11,8 @@ class PatientDocumentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', PatientDocument::class);
+        return $this->user()->can('create', PatientDocument::class)
+            && $this->user()->can('view', $this->route('patient'));
     }
 
     public function rules(): array

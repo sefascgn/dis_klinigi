@@ -24,7 +24,7 @@ class PatientDocumentTest extends TestCase
         $patient = Patient::factory()->create();
         $user = $this->secretary();
 
-        $this->actingAs($user)->post("/patients/{$patient->id}/documents", [
+        $this->actingAs($user)->post("/hastalar/{$patient->id}/belgeler", [
             'type' => 'xray',
             'title' => 'Panoramik',
             // GD gerektirmeyen gerçek 1x1 PNG içeriği
@@ -36,15 +36,17 @@ class PatientDocumentTest extends TestCase
         $this->assertSame($user->id, $document->uploaded_by);
         Storage::disk(PatientDocument::DISK)->assertExists($document->path);
 
-        $this->actingAs($this->doctorUser())->get("/documents/{$document->id}")->assertOk();
-        $this->actingAs($user)->get("/patients/{$patient->id}?tab=documents")->assertSee('Panoramik');
+        $this->actingAs($this->doctorUserOf($patient))->get("/belgeler/{$document->id}")->assertOk();
+        // Hastayla ilişkisi olmayan doktor belgeyi açamaz.
+        $this->actingAs($this->doctorUser())->get("/belgeler/{$document->id}")->assertForbidden();
+        $this->actingAs($user)->get("/hastalar/{$patient->id}?tab=documents")->assertSee('Panoramik');
     }
 
     public function test_only_images_and_pdfs_are_accepted(): void
     {
         $patient = Patient::factory()->create();
 
-        $this->actingAs($this->secretary())->post("/patients/{$patient->id}/documents", [
+        $this->actingAs($this->secretary())->post("/hastalar/{$patient->id}/belgeler", [
             'type' => 'other',
             'file' => UploadedFile::fake()->create('virus.exe', 10, 'application/octet-stream'),
         ])->assertSessionHasErrors('file');
@@ -56,22 +58,22 @@ class PatientDocumentTest extends TestCase
     {
         $document = PatientDocument::factory()->create();
 
-        $this->get("/documents/{$document->id}")->assertRedirect('/login');
+        $this->get("/belgeler/{$document->id}")->assertRedirect('/giris');
     }
 
     public function test_only_uploader_or_admin_can_delete_and_file_is_removed(): void
     {
         $uploader = $this->secretary();
         $patient = Patient::factory()->create();
-        $this->actingAs($uploader)->post("/patients/{$patient->id}/documents", [
+        $this->actingAs($uploader)->post("/hastalar/{$patient->id}/belgeler", [
             'type' => 'consent',
             'file' => UploadedFile::fake()->create('onam.pdf', 100, 'application/pdf'),
         ]);
         $document = PatientDocument::firstOrFail();
         $this->assertSame('onam', $document->title, 'Başlık boşsa dosya adı kullanılır.');
 
-        $this->actingAs($this->secretary())->delete("/documents/{$document->id}")->assertForbidden();
-        $this->actingAs($uploader)->delete("/documents/{$document->id}")->assertRedirect();
+        $this->actingAs($this->secretary())->delete("/belgeler/{$document->id}")->assertForbidden();
+        $this->actingAs($uploader)->delete("/belgeler/{$document->id}")->assertRedirect();
 
         $this->assertModelMissing($document);
         Storage::disk(PatientDocument::DISK)->assertMissing($document->path);

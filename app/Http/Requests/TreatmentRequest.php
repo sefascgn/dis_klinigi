@@ -4,10 +4,12 @@ namespace App\Http\Requests;
 
 use App\Enums\TreatmentStatus;
 use App\Http\Requests\Concerns\AuthorizesResource;
+use App\Models\Patient;
 use App\Models\Treatment;
 use App\Support\Teeth;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class TreatmentRequest extends FormRequest
 {
@@ -42,6 +44,41 @@ class TreatmentRequest extends FormRequest
             'status' => ['required', Rule::enum(TreatmentStatus::class)],
             'treatment_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
+        ];
+    }
+
+    /**
+     * Doktor için ek kurallar:
+     *  - yalnızca kendi hastasına tedavi girebilir,
+     *  - kayıtlı tedavinin ücretini değiştiremez (borç ve ciroyu etkiler; yalnızca yönetici),
+     *  - tamamlanmış tedavinin durumunu değiştiremez.
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                if (! $this->user()->isDoctor() || $validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $patient = Patient::find($this->validated('patient_id'));
+                if (! $patient?->isVisibleTo($this->user())) {
+                    $validator->errors()->add('patient_id', 'Bu hastaya tedavi kaydı giremezsiniz.');
+                }
+
+                $treatment = $this->route('treatment');
+                if (! $treatment) {
+                    return;
+                }
+
+                if (round((float) $this->validated('price'), 2) !== round((float) $treatment->price, 2)) {
+                    $validator->errors()->add('price', 'Kayıtlı tedavinin ücretini yalnızca yönetici değiştirebilir.');
+                }
+
+                if ($treatment->status === TreatmentStatus::Completed && $this->validated('status') !== TreatmentStatus::Completed->value) {
+                    $validator->errors()->add('status', 'Tamamlanmış tedavinin durumunu yalnızca yönetici değiştirebilir.');
+                }
+            },
         ];
     }
 }

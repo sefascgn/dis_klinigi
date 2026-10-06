@@ -213,11 +213,8 @@ class AppointmentController extends Controller
 
     private function formData(Appointment $appointment, int $duration): array
     {
-        $durations = AppointmentRequest::DURATIONS;
-        if (! in_array($duration, $durations, true)) {
-            $durations[] = $duration;
-            sort($durations);
-        }
+        // Doğrulama ile aynı liste: formda görünen her süre kaydedilebilir.
+        $durations = AppointmentRequest::durationOptions($appointment->exists ? $appointment : null);
 
         return [
             'appointment' => $appointment,

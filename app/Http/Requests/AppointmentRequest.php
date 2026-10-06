@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\AppointmentStatus;
 use App\Http\Requests\Concerns\AuthorizesResource;
 use App\Models\Appointment;
+use App\Models\ClinicSetting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,26 @@ class AppointmentRequest extends FormRequest
     use AuthorizesResource;
 
     public const DURATIONS = [15, 20, 30, 45, 60, 90, 120, 180];
+
+    /**
+     * Formda sunulan ve kabul edilen süreler: standart süreler, kliniğin varsayılan
+     * süresi ve (düzenlemede) randevunun mevcut süresi.
+     *
+     * @return list<int>
+     */
+    public static function durationOptions(?Appointment $appointment = null): array
+    {
+        $durations = [
+            ...self::DURATIONS,
+            ClinicSetting::current()->default_appointment_duration,
+            ...($appointment ? [$appointment->durationInMinutes()] : []),
+        ];
+
+        $durations = array_values(array_unique(array_map('intval', $durations)));
+        sort($durations);
+
+        return $durations;
+    }
 
     protected string $resourceModel = Appointment::class;
 
@@ -31,7 +52,7 @@ class AppointmentRequest extends FormRequest
                 Rule::exists('doctors', 'id')->whereNull('deleted_at')->where('is_active', true),
             ],
             'starts_at' => array_filter(['required', 'date', $isCreate ? 'after:now' : null]),
-            'duration' => ['required', 'integer', Rule::in(self::DURATIONS)],
+            'duration' => ['required', 'integer', Rule::in(self::durationOptions($this->route('appointment')))],
             'status' => [$isCreate ? 'nullable' : 'required', Rule::enum(AppointmentStatus::class)],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];

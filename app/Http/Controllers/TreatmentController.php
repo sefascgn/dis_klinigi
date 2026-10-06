@@ -45,12 +45,21 @@ class TreatmentController extends Controller
     {
         Gate::authorize('create', Treatment::class);
 
+        // Ön doldurma yalnızca kullanıcının görebildiği randevu / hasta için yapılır.
         $appointment = $request->integer('appointment_id')
             ? Appointment::find($request->integer('appointment_id'))
             : null;
+        if ($appointment && $request->user()->cannot('view', $appointment)) {
+            $appointment = null;
+        }
+
+        $patientId = $request->integer('patient_id') ?: null;
+        if ($patientId && ! Patient::query()->visibleTo($request->user())->whereKey($patientId)->exists()) {
+            $patientId = null;
+        }
 
         $treatment = new Treatment([
-            'patient_id' => $appointment?->patient_id ?? ($request->integer('patient_id') ?: null),
+            'patient_id' => $appointment?->patient_id ?? $patientId,
             'doctor_id' => $appointment?->doctor_id ?? $request->user()->doctor?->id,
             'appointment_id' => $appointment?->id,
             'status' => TreatmentStatus::Completed,

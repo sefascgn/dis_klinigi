@@ -27,7 +27,11 @@
                 <div class="w-16 shrink-0"></div>
                 @foreach ($columns as $doctor)
                     <div class="min-w-0 flex-1 border-l border-gray-200 px-2 py-2 text-center">
-                        <a href="{{ route('doctors.show', $doctor) }}" class="block truncate text-sm font-semibold text-gray-800 hover:text-primary-700">{{ $doctor->full_name }}</a>
+                        @can('view', $doctor)
+                            <a href="{{ route('doctors.show', $doctor) }}" class="block truncate text-sm font-semibold text-gray-800 hover:text-primary-700">{{ $doctor->full_name }}</a>
+                        @else
+                            <p class="truncate text-sm font-semibold text-gray-800">{{ $doctor->full_name }}</p>
+                        @endcan
                         <p class="truncate text-xs text-gray-500">
                             {{ $gridItems->where('doctor_id', $doctor->id)->count() }} randevu{{ $doctor->specialty ? ' · '.$doctor->specialty : '' }}
                         </p>

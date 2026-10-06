@@ -33,7 +33,7 @@ class TreatmentTest extends TestCase
     {
         $data = $this->payload();
 
-        $this->actingAs($this->admin())->post('/treatments', $data)
+        $this->actingAs($this->admin())->post('/tedaviler', $data)
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('patients.show', $data['patient_id']));
 
@@ -42,10 +42,11 @@ class TreatmentTest extends TestCase
 
     public function test_doctor_records_treatment_in_own_name(): void
     {
-        $user = $this->doctorUser();
+        $patient = Patient::factory()->create();
+        $user = $this->doctorUserOf($patient);
         $otherDoctor = Doctor::factory()->create();
 
-        $this->actingAs($user)->post('/treatments', $this->payload(['doctor_id' => $otherDoctor->id]))
+        $this->actingAs($user)->post('/tedaviler', $this->payload(['patient_id' => $patient->id, 'doctor_id' => $otherDoctor->id]))
             ->assertSessionHasNoErrors();
 
         $this->assertSame($user->doctor->id, Treatment::firstOrFail()->doctor_id);
@@ -57,19 +58,19 @@ class TreatmentTest extends TestCase
         $own = Treatment::factory()->for($user->doctor)->create();
         $other = Treatment::factory()->create();
 
-        $this->actingAs($user)->get("/treatments/{$own->id}/edit")->assertOk();
-        $this->actingAs($user)->get("/treatments/{$other->id}/edit")->assertForbidden();
-        $this->actingAs($user)->delete("/treatments/{$own->id}")->assertForbidden();
+        $this->actingAs($user)->get("/tedaviler/{$own->id}/duzenle")->assertOk();
+        $this->actingAs($user)->get("/tedaviler/{$other->id}/duzenle")->assertForbidden();
+        $this->actingAs($user)->delete("/tedaviler/{$own->id}")->assertForbidden();
     }
 
     public function test_secretary_cannot_record_treatment(): void
     {
-        $this->actingAs($this->secretary())->post('/treatments', $this->payload())->assertForbidden();
+        $this->actingAs($this->secretary())->post('/tedaviler', $this->payload())->assertForbidden();
     }
 
     public function test_treatment_validation(): void
     {
-        $this->actingAs($this->admin())->post('/treatments', $this->payload([
+        $this->actingAs($this->admin())->post('/tedaviler', $this->payload([
             'tooth_number' => 19,
             'price' => -5,
             'status' => 'unknown',
@@ -80,10 +81,10 @@ class TreatmentTest extends TestCase
     {
         $appointment = Appointment::factory()->status(AppointmentStatus::Completed)->create();
 
-        $this->actingAs($this->admin())->post('/treatments', $this->payload(['appointment_id' => $appointment->id]))
+        $this->actingAs($this->admin())->post('/tedaviler', $this->payload(['appointment_id' => $appointment->id]))
             ->assertSessionHasErrors('appointment_id');
 
-        $this->actingAs($this->admin())->post('/treatments', $this->payload([
+        $this->actingAs($this->admin())->post('/tedaviler', $this->payload([
             'appointment_id' => $appointment->id,
             'patient_id' => $appointment->patient_id,
         ]))->assertSessionHasNoErrors();
@@ -93,7 +94,7 @@ class TreatmentTest extends TestCase
     {
         $appointment = Appointment::factory()->status(AppointmentStatus::Completed)->create();
 
-        $this->actingAs($this->admin())->get("/treatments/create?appointment_id={$appointment->id}")
+        $this->actingAs($this->admin())->get("/tedaviler/yeni?appointment_id={$appointment->id}")
             ->assertOk()
             ->assertSee($appointment->patient->full_name)
             ->assertSee('name="appointment_id" value="'.$appointment->id.'"', false);
@@ -103,24 +104,59 @@ class TreatmentTest extends TestCase
     {
         $treatment = Treatment::factory()->create();
 
-        $this->actingAs($this->admin())->delete("/treatment-types/{$treatment->treatment_type_id}")->assertSessionHas('error');
+        $this->actingAs($this->admin())->delete("/islem-turleri/{$treatment->treatment_type_id}")->assertSessionHas('error');
         $this->assertModelExists($treatment->treatmentType);
 
         $unused = TreatmentType::factory()->create();
-        $this->actingAs($this->admin())->delete("/treatment-types/{$unused->id}")->assertSessionHas('success');
+        $this->actingAs($this->admin())->delete("/islem-turleri/{$unused->id}")->assertSessionHas('success');
         $this->assertModelMissing($unused);
     }
 
     public function test_admin_manages_treatment_types(): void
     {
-        $this->actingAs($this->admin())->post('/treatment-types', [
+        $this->actingAs($this->admin())->post('/islem-turleri', [
             'name' => 'Kanal tedavisi', 'default_price' => 6000, 'is_active' => '1',
-        ])->assertRedirect('/treatment-types');
+        ])->assertRedirect('/islem-turleri');
 
-        $this->actingAs($this->admin())->post('/treatment-types', ['name' => 'Kanal tedavisi', 'default_price' => 1])
+        $this->actingAs($this->admin())->post('/islem-turleri', ['name' => 'Kanal tedavisi', 'default_price' => 1])
             ->assertSessionHasErrors('name');
 
-        $this->actingAs($this->secretary())->post('/treatment-types', ['name' => 'X', 'default_price' => 1])
+        $this->actingAs($this->secretary())->post('/islem-turleri', ['name' => 'X', 'default_price' => 1])
             ->assertForbidden();
+    }
+
+    public function test_doctor_cannot_record_treatment_for_unrelated_patient(): void
+    {
+        $this->actingAs($this->doctorUser())->post('/tedaviler', $this->payload())
+            ->assertSessionHasErrors('patient_id');
+
+        $this->assertDatabaseCount('treatments', 0);
+    }
+
+    public function test_doctor_cannot_change_price_or_completed_status(): void
+    {
+        $user = $this->doctorUser();
+        $treatment = Treatment::factory()->for($user->doctor)->create(['status' => 'completed', 'price' => 3000]);
+        $base = [
+            'patient_id' => $treatment->patient_id,
+            'treatment_type_id' => $treatment->treatment_type_id,
+            'price' => '3000',
+            'status' => 'completed',
+            'treatment_date' => $treatment->treatment_date->toDateString(),
+        ];
+
+        $this->actingAs($user)->put("/tedaviler/{$treatment->id}", [...$base, 'price' => '100'])
+            ->assertSessionHasErrors('price');
+        $this->actingAs($user)->put("/tedaviler/{$treatment->id}", [...$base, 'status' => 'cancelled'])
+            ->assertSessionHasErrors('status');
+        $this->actingAs($user)->put("/tedaviler/{$treatment->id}", [...$base, 'notes' => 'Kontrol iyi'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('3000.00', $treatment->fresh()->price);
+
+        // Yönetici ücreti değiştirebilir.
+        $this->actingAs($this->admin())->put("/tedaviler/{$treatment->id}", [...$base, 'doctor_id' => $user->doctor->id, 'price' => '2500'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('2500.00', $treatment->fresh()->price);
     }
 }

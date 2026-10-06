@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Http\Requests\UserRequest;
+use App\Models\Expense;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,6 +89,14 @@ class UserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         Gate::authorize('delete', $user);
+
+        // Silinirse ödeme/giderlerdeki "kim aldı / kim girdi" bilgisi boşalır.
+        $hasFinancialRecords = Payment::withTrashed()->where('received_by', $user->id)->exists()
+            || Expense::withTrashed()->where('created_by', $user->id)->exists();
+
+        if ($hasFinancialRecords) {
+            return back()->with('error', 'Bu kullanıcının kayıtlı ödeme veya gider işlemleri var. Silmek yerine hesabı pasifleştirin.');
+        }
 
         $user->delete();
 

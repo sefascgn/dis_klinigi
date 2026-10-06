@@ -4,19 +4,21 @@ Laravel 12 + MySQL ile geliştirilmiş, diş kliniklerinin günlük operasyonlar
 
 **Arayüz:** Blade + Tailwind CSS + Alpine.js (Laravel Breeze altyapısı, Vite ile derlenir)
 
-## Kurulum
+## Kurulum (geliştirme)
 
 ```bash
 composer install
-npm install && npm run build
-cp .env.example .env        # DB_* ve ADMIN_PASSWORD değerlerini doldurun
+npm install
+cp .env.example .env        # DB_* değerlerini doldurun
+# .env içinde: APP_ENV=local, APP_DEBUG=true, LOG_LEVEL=debug
 php artisan key:generate
 php artisan migrate --seed
-php artisan serve
+php artisan serve            # ayrı terminalde: npm run dev
 ```
 
 `db:seed` şunları oluşturur: klinik bilgileri kaydı, varsayılan işlem tanımları ve ilk yönetici
-(`ADMIN_EMAIL` / `ADMIN_PASSWORD`). `APP_ENV=local` ise ayrıca demo verisi eklenir:
+(`ADMIN_EMAIL` / `ADMIN_PASSWORD`). `APP_ENV=local` ise ayrıca demo verisi eklenir
+(local'de `ADMIN_PASSWORD` boşsa yönetici şifresi de `password` olur):
 
 | Rol       | E-posta               | Şifre      |
 |-----------|-----------------------|------------|
@@ -24,7 +26,22 @@ php artisan serve
 | Sekreter  | sekreter@klinik.test  | password   |
 | Doktor    | doktor@klinik.test    | password   |
 
-> Production ortamında güçlü bir `ADMIN_PASSWORD` kullanın; demo verisi bu ortamda eklenmez.
+## Kurulum (production)
+
+`.env.example` production için güvenli değerlerle gelir (`APP_ENV=production`, `APP_DEBUG=false`).
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+cp .env.example .env        # DB_*, APP_URL, ADMIN_EMAIL ve ADMIN_PASSWORD (en az 12 karakter)
+# HTTPS ile yayındaysa: SESSION_SECURE_COOKIE=true
+php artisan key:generate
+php artisan migrate --force --seed
+php artisan optimize
+```
+
+- Demo verisi production'da eklenmez; `ADMIN_PASSWORD` boş veya zayıfsa seeder hata vererek durur.
+- PHP'de OPcache açık olmalı (`opcache.enable=1`), Xdebug kapalı olmalı.
 
 ## Testler
 

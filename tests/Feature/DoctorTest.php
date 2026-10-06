@@ -18,7 +18,7 @@ class DoctorTest extends TestCase
     {
         $account = User::factory()->create(['role' => 'doctor']);
 
-        $this->actingAs($this->admin())->post('/doctors', [
+        $this->actingAs($this->admin())->post('/doktorlar', [
             'title' => 'Uzm. Dt.',
             'first_name' => 'Can',
             'last_name' => 'Öz',
@@ -36,7 +36,7 @@ class DoctorTest extends TestCase
     {
         $secretary = $this->secretary();
 
-        $this->actingAs($this->admin())->post('/doctors', [
+        $this->actingAs($this->admin())->post('/doktorlar', [
             'first_name' => 'Can', 'last_name' => 'Öz', 'user_id' => $secretary->id,
         ])->assertSessionHasErrors('user_id');
     }
@@ -46,9 +46,9 @@ class DoctorTest extends TestCase
         $doctor = Doctor::factory()->create();
         $user = $this->secretary();
 
-        $this->actingAs($user)->post('/doctors', ['first_name' => 'A', 'last_name' => 'B'])->assertForbidden();
-        $this->actingAs($user)->put("/doctors/{$doctor->id}", ['first_name' => 'A', 'last_name' => 'B'])->assertForbidden();
-        $this->actingAs($user)->delete("/doctors/{$doctor->id}")->assertForbidden();
+        $this->actingAs($user)->post('/doktorlar', ['first_name' => 'A', 'last_name' => 'B'])->assertForbidden();
+        $this->actingAs($user)->put("/doktorlar/{$doctor->id}", ['first_name' => 'A', 'last_name' => 'B'])->assertForbidden();
+        $this->actingAs($user)->delete("/doktorlar/{$doctor->id}")->assertForbidden();
     }
 
     public function test_doctor_page_lists_appointments(): void
@@ -56,7 +56,7 @@ class DoctorTest extends TestCase
         $doctor = Doctor::factory()->create();
         $appointment = Appointment::factory()->for($doctor)->create();
 
-        $this->actingAs($this->secretary())->get("/doctors/{$doctor->id}")
+        $this->actingAs($this->secretary())->get("/doktorlar/{$doctor->id}")
             ->assertOk()
             ->assertSee($appointment->patient->full_name);
     }
@@ -66,7 +66,7 @@ class DoctorTest extends TestCase
         $doctor = Doctor::factory()->create();
         Appointment::factory()->for($doctor)->at(Carbon::tomorrow()->setTime(10, 0))->create();
 
-        $this->actingAs($this->admin())->delete("/doctors/{$doctor->id}")->assertSessionHas('error');
+        $this->actingAs($this->admin())->delete("/doktorlar/{$doctor->id}")->assertSessionHas('error');
         $this->assertNotSoftDeleted($doctor);
     }
 
@@ -75,9 +75,19 @@ class DoctorTest extends TestCase
         $doctor = Doctor::factory()->create();
         Appointment::factory()->for($doctor)->at(Carbon::now()->subWeek())->status(AppointmentStatus::Completed)->create();
 
-        $this->actingAs($this->admin())->delete("/doctors/{$doctor->id}")->assertRedirect('/doctors');
+        $this->actingAs($this->admin())->delete("/doktorlar/{$doctor->id}")->assertRedirect('/doktorlar');
 
         $this->assertSoftDeleted($doctor);
         $this->assertNotNull(Appointment::first()->doctor);
+    }
+
+    public function test_doctor_can_only_open_own_doctor_page(): void
+    {
+        $user = $this->doctorUser();
+        $other = Doctor::factory()->create();
+
+        $this->actingAs($user)->get("/doktorlar/{$user->doctor->id}")->assertOk();
+        $this->actingAs($user)->get("/doktorlar/{$other->id}")->assertForbidden();
+        $this->actingAs($this->secretary())->get("/doktorlar/{$other->id}")->assertOk();
     }
 }

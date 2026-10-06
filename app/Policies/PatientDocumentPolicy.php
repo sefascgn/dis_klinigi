@@ -9,7 +9,7 @@ class PatientDocumentPolicy
 {
     public function view(User $user, PatientDocument $document): bool
     {
-        return true;
+        return $user->can('view', $document->patient);
     }
 
     public function create(User $user): bool
@@ -22,6 +22,7 @@ class PatientDocumentPolicy
      */
     public function delete(User $user, PatientDocument $document): bool
     {
-        return $user->isAdmin() || $document->uploaded_by === $user->id;
+        return $user->isAdmin()
+            || ($document->uploaded_by === $user->id && $user->can('view', $document->patient));
     }
 }
