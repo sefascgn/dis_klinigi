@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        // Veritabanı + belge yedekleri (config/backup.php). Hasta belgelerinden ayrı tutulur.
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/backups'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

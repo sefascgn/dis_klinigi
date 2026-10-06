@@ -73,14 +73,14 @@
                                     <x-badge color="red" class="ml-1" title="{{ collect([$patient->allergies ? 'Alerji: '.$patient->allergies : null])->merge($patient->medical_conditions?->map->label())->filter()->implode(', ') }}">Sağlık uyarısı</x-badge>
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap">{{ $patient->phone }}</td>
+                            <td class="whitespace-nowrap">{{ $patient->formatted_phone }}</td>
                             @if ($isRecall)
                                 <td class="whitespace-nowrap">
                                     {{ Illuminate\Support\Carbon::parse($patient->last_visit_at)->format('d.m.Y') }}
                                     <span class="block text-xs text-gray-500">{{ Illuminate\Support\Carbon::parse($patient->last_visit_at)->diffForHumans() }}</span>
                                 </td>
                             @else
-                                <td class="hidden md:table-cell">{{ $patient->national_id ?? '—' }}</td>
+                                <td class="hidden md:table-cell">{{ $patient->masked_national_id ?? '—' }}</td>
                                 <td class="hidden lg:table-cell">{{ $patient->age ?? '—' }}</td>
                             @endif
                             @if ($showBalance)

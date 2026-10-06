@@ -6,6 +6,7 @@ use App\Models\ClinicSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Resource adresleri Türkçe: /randevular/yeni, /hastalar/5/duzenle
         Route::resourceVerbs(['create' => 'yeni', 'edit' => 'duzenle']);
+
+        // Tüm listelerde panelin temasına uygun sayfalama.
+        Paginator::defaultView('pagination');
 
         // Geliştirmede N+1 sorgularını ve tanımsız özellik erişimini erkenden yakala.
         Model::preventLazyLoading(! $this->app->isProduction());

@@ -19,7 +19,7 @@
                 <dl class="space-y-3 text-sm">
                     <div class="flex justify-between gap-4"><dt class="text-gray-500">Durum</dt><dd><x-badge :color="$doctor->is_active ? 'green' : 'gray'">{{ $doctor->is_active ? 'Aktif' : 'Pasif' }}</x-badge></dd></div>
                     <div class="flex justify-between gap-4"><dt class="text-gray-500">Uzmanlık</dt><dd class="text-right">{{ $doctor->specialty ?? '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-gray-500">Telefon</dt><dd class="text-right">{{ $doctor->phone ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-gray-500">Telefon</dt><dd class="text-right">{{ \App\Support\Phone::format($doctor->phone) ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-4"><dt class="text-gray-500">E-posta</dt><dd class="truncate text-right">{{ $doctor->email ?? '—' }}</dd></div>
                 </dl>
             </x-card>

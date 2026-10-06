@@ -6,6 +6,7 @@ use App\Enums\AppointmentStatus;
 use App\Enums\Gender;
 use App\Enums\MedicalCondition;
 use App\Enums\TreatmentStatus;
+use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -75,6 +76,21 @@ class Patient extends Model
     protected function fullName(): Attribute
     {
         return Attribute::get(fn () => "{$this->first_name} {$this->last_name}");
+    }
+
+    protected function formattedPhone(): Attribute
+    {
+        return Attribute::get(fn () => Phone::format($this->phone));
+    }
+
+    /**
+     * Listelerde T.C. kimlik no maskelenir (KVKK): 12345678901 → 123******01
+     */
+    protected function maskedNationalId(): Attribute
+    {
+        return Attribute::get(fn () => $this->national_id
+            ? substr($this->national_id, 0, 3).str_repeat('*', strlen($this->national_id) - 5).substr($this->national_id, -2)
+            : null);
     }
 
     protected function age(): Attribute

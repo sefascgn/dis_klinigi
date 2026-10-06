@@ -31,7 +31,7 @@ class PatientSearchController extends Controller
             ->map(fn (Patient $p) => [
                 'id' => $p->id,
                 'name' => $p->full_name,
-                'phone' => $p->phone,
+                'phone' => $p->formatted_phone,
             ]);
 
         return response()->json($patients);

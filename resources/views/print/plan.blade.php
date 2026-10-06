@@ -7,7 +7,7 @@
         <div>
             <p class="text-xs uppercase text-gray-500">Hasta</p>
             <p class="font-semibold">{{ $patient->full_name }}</p>
-            <p>{{ $patient->phone }}</p>
+            <p>{{ $patient->formatted_phone }}</p>
         </div>
         <div class="text-right">
             <p class="text-xs uppercase text-gray-500">Hasta no</p>

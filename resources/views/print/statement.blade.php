@@ -2,7 +2,7 @@
     <div class="mb-6">
         <p class="text-xs uppercase text-gray-500">Hasta</p>
         <p class="font-semibold">{{ $patient->full_name }} <span class="font-normal text-gray-500">(#{{ $patient->id }})</span></p>
-        <p>{{ $patient->phone }}</p>
+        <p>{{ $patient->formatted_phone }}</p>
     </div>
 
     @php $balance = 0; @endphp

@@ -20,7 +20,7 @@
                     </td>
                     <td>
                         <a href="{{ route('patients.show', $appointment->patient_id) }}" class="link">{{ $appointment->patient->full_name }}</a>
-                        <span class="block text-xs text-gray-500">{{ $appointment->patient->phone }}</span>
+                        <span class="block text-xs text-gray-500">{{ $appointment->patient->formatted_phone }}</span>
                     </td>
                     <td class="hidden md:table-cell">{{ $appointment->doctor->full_name }}</td>
                     <td>

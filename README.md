@@ -42,6 +42,22 @@ php artisan optimize
 
 - Demo verisi production'da eklenmez; `ADMIN_PASSWORD` boş veya zayıfsa seeder hata vererek durur.
 - PHP'de OPcache açık olmalı (`opcache.enable=1`), Xdebug kapalı olmalı.
+- Zamanlanmış görevler için cron: `* * * * * cd /proje/yolu && php artisan schedule:run >> /dev/null 2>&1`
+
+### Yedekleme
+
+Her gece 01:30'da veritabanı ve hasta belgeleri (`storage/app/private`) tek bir zip olarak
+`storage/app/backups` altına alınır; eski yedekler saklama kuralına göre silinir
+(`config/backup.php`). Son yedek 1 günden eskiyse yöneticiye e-posta gider.
+
+```bash
+php artisan backup:run      # elle yedek al
+php artisan backup:list     # yedekleri listele
+```
+
+- `mysqldump` PATH'te değilse `.env` içinde `DB_DUMP_BINARY_PATH` tanımlayın.
+- Hasta verisi içerdiği için `BACKUP_ARCHIVE_PASSWORD` ile arşivi şifreleyin.
+- Sunucu arızasına karşı en az bir sunucu dışı kopya ekleyin (`BACKUP_DISKS=backups,s3`).
 
 ## Testler
 

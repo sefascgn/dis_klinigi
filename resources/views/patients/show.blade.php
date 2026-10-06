@@ -61,7 +61,7 @@
             <x-card title="İletişim ve kimlik">
                 <dl class="space-y-3 text-sm">
                     <div class="flex justify-between gap-4"><dt class="text-gray-500">Telefon</dt><dd class="flex items-center justify-end gap-2 text-right font-medium">
-                        <a href="tel:{{ $patient->phone }}" class="link">{{ $patient->phone }}</a>
+                        <a href="tel:{{ $patient->phone }}" class="link">{{ $patient->formatted_phone }}</a>
                         @if ($wa = App\Support\WhatsApp::link($patient->phone, 'Merhaba '.$patient->first_name.', '))
                             <a href="{{ $wa }}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-700" title="WhatsApp'tan yaz"><x-icon name="chat" class="h-4 w-4" /></a>
                         @endif

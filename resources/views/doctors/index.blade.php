@@ -38,7 +38,7 @@
                             </td>
                             <td>{{ $doctor->specialty ?? '—' }}</td>
                             <td class="hidden md:table-cell">
-                                <p>{{ $doctor->phone ?? '—' }}</p>
+                                <p>{{ \App\Support\Phone::format($doctor->phone) ?? '—' }}</p>
                                 @if ($doctor->email)<p class="text-xs text-gray-500">{{ $doctor->email }}</p>@endif
                             </td>
                             <td class="hidden lg:table-cell">{{ $doctor->user?->email ?? '—' }}</td>

@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\Treatment;
+use App\Support\Phone;
 use App\Support\WhatsApp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -167,5 +168,35 @@ class ClinicToolsTest extends TestCase
 
         $this->actingAs($this->secretary())->get('/raporlar')->assertForbidden();
         $this->actingAs($this->doctorUser())->get('/raporlar')->assertForbidden();
+    }
+
+    public function test_phone_is_formatted_and_national_id_masked_in_list(): void
+    {
+        $this->assertSame('0532 123 45 67', Phone::format('05321234567'));
+        $this->assertSame('0532 123 45 67', Phone::format('+90 532 123 4567'));
+        $this->assertSame('0532 123 45 67', Phone::format('5321234567'));
+        $this->assertSame('+44 20 7946 0958', Phone::format('+44 20 7946 0958'), 'Tanınmayan numara olduğu gibi kalır.');
+        $this->assertNull(Phone::format(null));
+
+        $patient = Patient::factory()->create(['phone' => '05321234567', 'national_id' => '12345678901']);
+
+        $this->actingAs($this->secretary())->get('/hastalar')
+            ->assertSee('0532 123 45 67')
+            ->assertSee('123******01')
+            ->assertDontSee('12345678901');
+
+        // Kartta tam numara görünür.
+        $this->actingAs($this->secretary())->get("/hastalar/{$patient->id}")->assertSee('12345678901');
+    }
+
+    public function test_error_pages_are_turkish(): void
+    {
+        $this->actingAs($this->secretary())->get('/olmayan-sayfa')
+            ->assertNotFound()
+            ->assertSee('Sayfa bulunamadı');
+
+        $this->actingAs($this->secretary())->get('/raporlar')
+            ->assertForbidden()
+            ->assertSee('Bu sayfaya erişim yetkiniz yok');
     }
 }

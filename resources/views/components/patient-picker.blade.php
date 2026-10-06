@@ -6,7 +6,7 @@
     if ($selectedId && $patient?->id != $selectedId) {
         $patient = \App\Models\Patient::find($selectedId);
     }
-    $initial = $patient ? ['id' => $patient->id, 'name' => $patient->full_name, 'phone' => $patient->phone] : null;
+    $initial = $patient ? ['id' => $patient->id, 'name' => $patient->full_name, 'phone' => $patient->formatted_phone] : null;
 @endphp
 
 <div x-data="patientPicker(@js($initial), @js(route('patients.search')))" {{ $attributes->only('class') }}>
